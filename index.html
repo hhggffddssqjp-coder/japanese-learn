@@ -3,34 +3,76 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>にほんご 日語學習</title>
-  <meta name="description" content="五十音、單字記憶卡、文法課與測驗的日語學習 App">
-  <meta name="theme-color" content="#d9452b">
+  <title>にほんご冒險｜闖關式日語學習</title>
+  <meta name="description" content="闖關、單字圖鑑、發音、連勝與等級——從五十音到 N4 的日語學習冒險">
+  <meta name="theme-color" content="#f6efe2">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Shippori+Mincho+B1:wght@700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="top">
-    <a class="brand" href="#/home"><span class="logo">日</span><span>にほんご</span></a>
-    <div class="chips">
-      <span class="chip" title="連續學習天數">🔥 <b id="h-streak">0</b></span>
-      <span class="chip" title="等級">Lv <b id="h-level">1</b></span>
+  <div class="shell">
+    <aside class="side" aria-label="主選單">
+      <a class="brand" href="#/learn"><span class="logo" lang="ja">日</span><span class="brand-t" lang="ja">にほんご<small>冒險</small></span></a>
+      <nav class="side-nav">
+        <a href="#/learn" data-tab="learn"><span class="ni" id="ni-learn"></span><span>學習</span></a>
+        <a href="#/dex" data-tab="dex"><span class="ni" id="ni-dex"></span><span>圖鑑</span></a>
+        <a href="#/practice" data-tab="practice"><span class="ni" id="ni-practice"></span><span>練習</span></a>
+        <a href="#/me" data-tab="me"><span class="ni" id="ni-me"></span><span>我的</span></a>
+      </nav>
+      <div class="side-foot">
+        <span class="chip streak" title="連續學習天數"><span class="chip-ic" id="ic-flame-s"></span><b data-chip="streak">0</b></span>
+        <span class="chip lvl" title="等級">Lv <b data-chip="level">1</b><i class="chip-bar"><i data-chip="xp"></i></i></span>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header class="topbar">
+        <a class="brand" href="#/learn"><span class="logo" lang="ja">日</span><span class="brand-t" lang="ja">にほんご<small>冒險</small></span></a>
+        <div class="chips">
+          <span class="chip streak" title="連續學習天數"><span class="chip-ic" id="ic-flame"></span><b data-chip="streak">0</b></span>
+          <span class="chip lvl" title="等級">Lv <b data-chip="level">1</b><i class="chip-bar"><i data-chip="xp"></i></i></span>
+        </div>
+      </header>
+      <main id="main" tabindex="-1"><noscript>請開啟 JavaScript 以使用本應用程式。</noscript></main>
     </div>
-  </header>
+  </div>
 
-  <main id="app" tabindex="-1"><noscript>請開啟 JavaScript 以使用本應用程式。</noscript></main>
-
-  <nav class="tabs" aria-label="主選單">
-    <a href="#/home" data-tab="home"><i>家</i><span>首頁</span></a>
-    <a href="#/kana" data-tab="kana"><i>あ</i><span>五十音</span></a>
-    <a href="#/vocab" data-tab="vocab"><i>語</i><span>單字</span></a>
-    <a href="#/grammar" data-tab="grammar"><i>文</i><span>文法</span></a>
-    <a href="#/me" data-tab="me"><i>我</i><span>我的</span></a>
+  <nav class="tabbar" aria-label="主選單">
+    <a href="#/learn" data-tab="learn"><span class="ni" id="nb-learn"></span><span>學習</span></a>
+    <a href="#/dex" data-tab="dex"><span class="ni" id="nb-dex"></span><span>圖鑑</span></a>
+    <a href="#/practice" data-tab="practice"><span class="ni" id="nb-practice"></span><span>練習</span></a>
+    <a href="#/me" data-tab="me"><span class="ni" id="nb-me"></span><span>我的</span></a>
   </nav>
-  <div id="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-label="闖關"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <script src="js/data-kana.js"></script>
+  <script src="js/data-words.js"></script>
+  <script src="js/data-grammar.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/curriculum.js"></script>
+  <script src="js/achievements.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/questions.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/views.js"></script>
+  <script>
+    // 導覽列圖示
+    (function () {
+      var I = window.JP.ui.ICON;
+      ['learn', 'dex', 'practice', 'me'].forEach(function (k) {
+        ['ni-', 'nb-'].forEach(function (p) { var el = document.getElementById(p + k); if (el) el.innerHTML = I[k](); });
+      });
+      ['ic-flame', 'ic-flame-s'].forEach(function (id) { var el = document.getElementById(id); if (el) el.innerHTML = I.flame(); });
+    })();
+  </script>
+  <script src="js/app.js"></script>
 </body>
 </html>
