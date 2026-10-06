@@ -105,7 +105,8 @@
       st.planned = st.queue.length;
       if (gen) { for (let i = 0; i < 3; i++) { const q = gen(); if (q) st.queue.push(q); } st.planned = 0; }
 
-      const hasTeach = teachIds.length > 0 || !!cfg.teachGrammar;
+      const pages = cfg.teachPages || null;
+      const hasTeach = teachIds.length > 0 || !!cfg.teachGrammar || !!pages;
       phase = hasTeach ? 'teach' : 'ask';
 
       /* ----- 外框 ----- */
@@ -144,7 +145,11 @@
       const useGrid = items.length >= 8;
       function renderTeach() {
         phase = 'teach';
-        if (cfg.teachGrammar) {
+        if (pages) {
+          const last = ti === pages.length - 1;
+          pb.innerHTML = `<div class="tdots">${pages.map((_, i) => `<i class="${i === ti ? 'on' : i < ti ? 'done' : ''}"></i>`).join('')}</div><div class="tcard-wrap" key="${ti}"><article class="tcard info gteach">${pages[ti]}</article></div>`;
+          pf.innerHTML = `${ti > 0 ? `<button type="button" class="btn btn-ghost" data-act="tprev" aria-label="上一頁">${ICON.back()}</button>` : ''}<button type="button" class="btn btn-big" data-act="${last ? 'start' : 'tnext'}" autofocus>${last ? '來個小測驗' : '下一頁'}</button>`;
+        } else if (cfg.teachGrammar) {
           pb.innerHTML = grammarTeach(cfg.teachGrammar);
           pf.innerHTML = `<button type="button" class="btn btn-big" data-act="start" autofocus>我學會了，開始挑戰</button>`;
         } else if (useGrid) {
@@ -379,7 +384,7 @@
             let passes = 0;
             for (let t = 0; t < 4; t++) { const x = st.tierRes[t]; if (x && x.c >= 2) passes++; else break; }
             r.placed = passes;
-            r.startWorld = [0, 1, 3, 4, 5][passes];
+            r.startWorld = ['intro', 'kata', 'n5a', 'n5b', 'n4'][passes];
             r.xp = 0;
             break;
           }
@@ -442,7 +447,7 @@
       let result = null;
 
       function placementText(r) {
-        const names = ['從「ひらがな」開始', '從「カタカナ」開始', '從「N5・基礎單字」開始', '從「N5・日常生活」開始', '從「N4・進階表達」開始'];
+        const names = ['從「はじめまして」零基礎入門開始', '從「カタカナ」開始', '從「N5・基礎單字」開始', '從「N5・日常生活」開始', '從「N4・進階表達」開始'];
         const label = [`零基礎起步`, `已熟悉平假名`, `假名與基礎單字都不錯`, `已有 N5 實力`, `已有 N4 實力`][r.placed];
         return `<div class="res-place"><b>${label}</b><p>我們為你${names[r.placed]}。前面的世界仍然保持開放，隨時都可以回去複習。</p></div>`;
       }

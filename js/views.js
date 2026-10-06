@@ -103,8 +103,10 @@
   }
 
   function viewLearn() {
+    const intro = !S.stats.lessons && !JP.stateOf(JP.NODES[0]).done && JP.currentNode().world === 'intro'
+      ? `<div class="card banner tip"><span class="bn-ico">🐱</span><div><b>第一次學日語？跟著地圖走就好</b><small>從「認識日語文字」開始，每關約 3 分鐘，答錯也沒關係。</small></div></div>` : '';
     const rail = `<aside class="rail">${levelCard()}${goalCard()}${streakCard()}</aside>`;
-    main().innerHTML = `<div class="learn">${rail}<div class="map-col">${voiceBanner()}${reviewBanner()}${JP.WORLDS.map(worldHtml).join('')}<div class="map-end"><p>🗻 更多關卡正在路上…</p></div></div></div>`;
+    main().innerHTML = `<div class="learn">${rail}<div class="map-col">${intro}${voiceBanner()}${reviewBanner()}${JP.WORLDS.map(worldHtml).join('')}<div class="map-end"><p>🗻 更多關卡正在路上…</p></div></div></div>`;
     const cur = main().querySelector('.node.current');
     if (cur && !viewLearn.shown) setTimeout(() => cur.scrollIntoView({ block: 'center', behavior: 'instant' }), 30);
     viewLearn.shown = true;
@@ -119,7 +121,7 @@
       if (!Q.canListen() && !launch.warned) { launch.warned = true; if (JP.tts.ok && !JP.tts.hasJa) toast('找不到日語語音，聽力題先略過囉'); }
       const res = await JP.play(cfg);
       const r = res && (res.result || (res.kind ? res : null));
-      if (r && r.kind === 'placement' && typeof r.startWorld === 'number' && r.startWorld > 0) JP.startAtWorld(r.startWorld);
+      if (r && r.kind === 'placement' && r.startWorld && r.startWorld !== 'intro') JP.startAtWorld(r.startWorld);
       refresh();
       if (r && r.lv && r.lv.leveledUp) await levelUp(r.lv.level);
       if (res && res.again) continue;
@@ -136,8 +138,9 @@
 
   function nodeConfig(node) {
     if (node.type === 'boss') return { kind: 'boss', title: node.title, node, hearts: 3, questions: Q.planBoss(node) };
+    if (node.type === 'info') return { kind: 'grammar', title: node.title, node, teachPages: node.pages, questions: Q.infoQuiz() };
     if (node.type === 'grammar') { const g = JP.gmap.get(node.gid); return { kind: 'grammar', title: node.title, node, teachGrammar: g, questions: Q.grammarQs(g, 8) }; }
-    return { kind: 'lesson', title: node.title, node, teachIds: node.items, questions: Q.planLesson(node.items) };
+    return { kind: 'lesson', title: node.title, node, teachIds: node.noTeach ? [] : node.items, questions: Q.planLesson(node.items, { easy: !!node.easy }) };
   }
   const runNode = (node) => launch(() => nodeConfig(node));
 
@@ -148,7 +151,7 @@
     const w = JP.worldOf(n.world);
     const its = n.items.map(JP.item);
     const done = s.done;
-    const desc = n.type === 'boss' ? '鬼關有 14 題，只有 <b>3 顆心</b>，答錯會扣心。打倒鬼就能獲得世界朱印！' : n.type === 'grammar' ? '先看文法重點，再用填空與排列句子練習。' : its[0] && its[0].kind === 'kana' ? '先認識新的假名與記憶圖，再用聽音、選擇、輸入練習。' : '先認識新單字的圖片、發音和例句，再開始闖關。';
+    const desc = n.type === 'info' ? '用 4 頁小卡片認識日語文字與五十音圖，再來個 5 題小測驗。' : n.noTeach ? '複習前面學的假名，有聽力與配對題。' : n.easy ? '只學 2～3 個字，慢慢來。先看圖記字形、聽發音，再做簡單的練習。' : n.type === 'boss' ? '鬼關有 14 題，只有 <b>3 顆心</b>，答錯會扣心。打倒鬼就能獲得世界朱印！' : n.type === 'grammar' ? '先看文法重點，再用填空與排列句子練習。' : its[0] && its[0].kind === 'kana' ? '先認識新的假名與記憶圖，再用聽音、選擇、輸入練習。' : '先認識新單字的圖片、發音和例句，再開始闖關。';
     const m = modal(`<div class="nsheet w-${w.theme}">
       <div class="ns-icon ${n.type}">${n.type === 'grammar' ? '文' : esc(n.icon)}</div>
       <h3 lang="ja">${esc(n.title)}</h3><p class="ns-sub">${esc(n.sub)}</p>
@@ -413,12 +416,13 @@
   function showWelcome(opts = {}) {
     const root = document.getElementById('overlay');
     const levels = [
-      [0, '🌱', '完全沒學過', '從平假名開始，一步一步來'],
-      [3, '🌸', '會五十音', '直接學單字與基本句子'],
-      [4, '🍵', '學過一些 N5', '已認識基礎單字，想練日常用語'],
-      [5, '🗻', '已有 N5 程度', '準備挑戰 N4 的單字與文法'],
+      ['intro', '🌱', '連五十音都不會', '從零開始：先認識文字，每關只學 2～5 個字'],
+      ['hira', '🌿', '認識一點假名', '跳過入門，從平假名開始複習'],
+      ['n5a', '🌸', '會五十音', '直接學單字與基本句子'],
+      ['n5b', '🍵', '學過一些 N5', '已認識基礎單字，想練日常用語'],
+      ['n4', '🗻', '已有 N5 程度', '準備挑戰 N4 的單字與文法'],
     ];
-    let lvl = 0, goal = S.goal || 50;
+    let lvl = 'intro', goal = S.goal || 50;
     root.className = 'overlay open k-welcome';
     document.body.classList.add('noscroll');
     root.innerHTML = `<div class="welcome"><div class="wel-in">
@@ -436,20 +440,20 @@
     const close = () => { root.classList.remove('open'); document.body.classList.remove('noscroll'); setTimeout(() => { if (!root.classList.contains('open')) root.innerHTML = ''; }, 250); };
     root.onclick = async (e) => {
       const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.lvl !== undefined) { lvl = +b.dataset.lvl; root.querySelectorAll('.lvl-opt').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); }
+      if (b.dataset.lvl !== undefined) { lvl = b.dataset.lvl; root.querySelectorAll('.lvl-opt').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); }
       else if (b.dataset.goal) { goal = +b.dataset.goal; root.querySelectorAll('#wel-goal button').forEach((x) => x.classList.toggle('on', x === b)); }
       else if (b.dataset.act === 'cancel') close();
       else if (b.dataset.act === 'begin') {
         S.goal = goal; S.onboarded = true;
-        if (lvl > 0) JP.startAtWorld(lvl);
+        if (lvl !== 'intro') JP.startAtWorld(lvl);
         JP.save(); close(); viewLearn.shown = false; refresh(); updateChips();
-        if (lvl > 0) toast('已為你解鎖前面的世界，隨時都能回去複習');
+        if (lvl !== 'intro') toast('已為你解鎖前面的世界，隨時都能回去複習');
       } else if (b.dataset.act === 'placement') {
         S.goal = goal; S.onboarded = true; JP.save();
         close();
         const res = await JP.play(placementConfig());
         const r = res && (res.result || res);
-        if (r && typeof r.startWorld === 'number' && r.startWorld > 0) JP.startAtWorld(r.startWorld);
+        if (r && r.startWorld && r.startWorld !== 'intro') JP.startAtWorld(r.startWorld);
         viewLearn.shown = false; refresh(); updateChips();
       }
     };

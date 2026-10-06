@@ -40,6 +40,7 @@
 
   /* ───────────── 世界與關卡 ───────────── */
   const WORLDS = [
+    { id: 'intro', title: 'はじめまして', zh: '零基礎入門', sub: '連五十音都不會也 OK：先認識文字，再學第一組母音', em: '🌱', theme: 'peach', level: '入門' },
     { id: 'hira', title: 'ひらがな', zh: '平假名', sub: '日語文字的第一步', em: '🌸', theme: 'sakura', level: '入門' },
     { id: 'kata', title: 'カタカナ', zh: '片假名', sub: '外來語與擬聲詞的專用字', em: '🍙', theme: 'sea', level: '入門' },
     { id: 'dakuon', title: '濁音・拗音', zh: '濁音與拗音', sub: '加上點點圈圈，聲音變豐富', em: '🎏', theme: 'matcha', level: '入門' },
@@ -73,7 +74,31 @@
   ];
   const bossOf = (world, title) => add({ id: `${world}:boss`, world, type: 'boss', title, sub: '鬼之關・守住 3 顆心', icon: '👹', items: [], gids: [] });
 
-  kanaNodes('hira', 'hira', basicRows);
+  // 零基礎入門：文字簡介 → 母音（每關只學 2~3 個字）→ 母音複習 → 鬼關
+  add({
+    id: 'intro:script', world: 'intro', type: 'info', title: '認識日語文字', sub: '三種文字與五十音圖', icon: '🗾', items: [],
+    pages: [
+      `<h2 class="g-title">日語有三種文字</h2><div class="info-rows">
+        <div class="info-row"><span class="ir-em">🌸</span><div><b lang="ja">ひらがな</b><p>圓圓的，用來寫日語本身的字，例如 <span lang="ja">さくら</span>（櫻花）。<b>最先學這個。</b></p></div></div>
+        <div class="info-row"><span class="ir-em">🍙</span><div><b lang="ja">カタカナ</b><p>直直的，用來寫外來語，例如 <span lang="ja">コーヒー</span>（咖啡）。</p></div></div>
+        <div class="info-row"><span class="ir-em">🈶</span><div><b lang="ja">漢字</b><p>和中文很像，例如 <span lang="ja">日本、学生</span>，你已經先贏一半了！</p></div></div></div>`,
+      `<h2 class="g-title">五十音圖是什麼？</h2><p>日語的基本發音表，一共約 50 個音。<b>橫排叫「行」，直排叫「段」。</b></p>
+        <p>最上面的 <b lang="ja">あ い う え お</b> 是 5 個「母音」，其他每個音都是「子音＋母音」：</p>
+        <table class="gt"><tr><th></th><th lang="ja">あ</th><th lang="ja">い</th><th lang="ja">う</th><th lang="ja">え</th><th lang="ja">お</th></tr>
+        <tr><th>母音</th><td>a</td><td>i</td><td>u</td><td>e</td><td>o</td></tr>
+        <tr><th lang="ja">か行</th><td lang="ja">か<br><small>k+a</small></td><td lang="ja">き<br><small>k+i</small></td><td lang="ja">く<br><small>k+u</small></td><td lang="ja">け<br><small>k+e</small></td><td lang="ja">こ<br><small>k+o</small></td></tr></table>
+        <p>所以只要把 5 個母音學好，後面就很好學了！</p>`,
+      `<h2 class="g-title">一個假名＝一個固定發音</h2><p>就像注音符號，看到就唸，不會像英文一樣變來變去。</p>
+        <div class="info-vowels" lang="ja"><div><b>あ</b><small>ㄚ</small></div><div><b>い</b><small>ㄧ</small></div><div><b>う</b><small>ㄨ</small></div><div><b>え</b><small>ㄝ</small></div><div><b>お</b><small>ㄛ</small></div></div>
+        <p class="small muted">注音只是近似：日語的「う」嘴唇放鬆、不用嘟圓。實際發音請多按 🔊 聽幾遍。</p>`,
+      `<h2 class="g-title">這樣學最有效</h2><ul class="info-list"><li>🖼️ <b>每個假名都配一張圖</b>，把「形狀＋聲音＋圖片」連在一起記。</li><li>🔊 <b>多聽、跟著唸</b>：每個字都能聽到發音，也有慢速 🐢。</li><li>🧩 <b>每關只學 2～5 個字</b>，不用急，答錯的題目會再出現。</li><li>🔁 <b>每天 5～10 分鐘</b>，保持連勝，比一次學很久有效。</li></ul>`,
+    ],
+  });
+  add({ id: 'intro:v1', world: 'intro', type: 'kana', easy: true, title: 'あ・い・う', sub: '第一組母音 a i u', icon: 'あ', items: ['h:あ', 'h:い', 'h:う'] });
+  add({ id: 'intro:v2', world: 'intro', type: 'kana', easy: true, title: 'え・お', sub: '第二組母音 e o', icon: 'え', items: ['h:え', 'h:お'] });
+  add({ id: 'intro:v3', world: 'intro', type: 'kana', noTeach: true, title: '母音總複習', sub: 'あいうえお 聽力＋配對', icon: '🔁', items: ['h:あ', 'h:い', 'h:う', 'h:え', 'h:お'] });
+  bossOf('intro', '母音・鬼關');
+  kanaNodes('hira', 'hira', basicRows.slice(1));
   bossOf('hira', '平假名・鬼關');
   kanaNodes('kata', 'kata', basicRows.map(([k, t, l]) => [k, t.replace(/[あ-ん]/g, (c) => K.toKata(c)), K.toKata(l)]));
   bossOf('kata', '片假名・鬼關');
@@ -117,7 +142,7 @@
   WORLDS.forEach((w) => {
     const ns = worldNodes[w.id];
     const boss = ns[ns.length - 1];
-    boss.items = ns.filter((n) => n.type !== 'boss').flatMap((n) => n.items);
+    boss.items = Array.from(new Set(ns.filter((n) => n.type !== 'boss').flatMap((n) => n.items)));
     boss.gids = ns.filter((n) => n.type === 'grammar').map((n) => n.gid);
     w.nodes = ns;
   });
@@ -148,7 +173,9 @@
     JP.save();
   }
   // 依程度直接開始於某個世界（之前的世界全部標示為已跳過）
-  function startAtWorld(i) {
+  function startAtWorld(w) {
+    const i = typeof w === 'number' ? w : WORLDS.findIndex((x) => x.id === w);
+    if (i < 0) return;
     for (let w = 0; w < i; w++) skipWorld(WORLDS[w].id);
     S.unlocked = Math.max(S.unlocked, worldNodes[WORLDS[i].id][0].idx);
     JP.save();
@@ -162,6 +189,14 @@
   };
   const worldCleared = (w) => stateOf(w.nodes[w.nodes.length - 1]).stars > 0;
   const currentNode = () => NODES[Math.min(S.unlocked, NODES.length - 1)];
+
+  // 課程版本升級（新增關卡會改變索引）：依已完成的關卡重新計算解鎖進度
+  if (S.cv !== 3) {
+    let m = -1;
+    NODES.forEach((n) => { const q = S.nodes[n.id]; if (q && (q.stars > 0 || q.skipped)) m = Math.max(m, n.idx); });
+    S.unlocked = Math.max(0, Math.min(NODES.length - 1, m + 1));
+    S.cv = 3; JP.save();
+  }
 
   Object.assign(JP, { WORLDS, NODES, nodeById, worldNodes, stateOf, completeNode, skipWorld, startAtWorld, worldOf, worldStars, worldCleared, currentNode, gmap, lessonMap });
 

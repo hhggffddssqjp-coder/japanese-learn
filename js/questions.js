@@ -240,10 +240,10 @@
     return qs;
   }
 
-  function planLesson(ids) {
+  function planLesson(ids, opts = {}) {
     const its = ids.map(JP.item).filter(Boolean);
     const n = its.length;
-    const count = clamp(n * 2 + 2, 10, 16);
+    const count = opts.easy ? clamp(n * 2 + 2, 6, 12) : clamp(n * 2 + 2, 10, 16);
     const qs = [];
     const used = {};
     const push = (it, tier) => {
@@ -252,9 +252,9 @@
     };
     const withMatch = n >= 4;
     its.forEach((it) => push(it, 'easy'));
-    shuffle(its).forEach((it, i) => { if (qs.length < count - (withMatch ? 1 : 0)) push(it, i % 2 ? 'mid' : 'easy'); });
+    shuffle(its).forEach((it, i) => { if (qs.length < count - (withMatch ? 1 : 0)) push(it, opts.easy || i % 2 === 0 ? 'easy' : 'mid'); });
     let guard = 0;
-    while (qs.length < count - (withMatch ? 1 : 0) && guard++ < 30) push(pick(its), pick(['mid', 'mid', 'hard']));
+    while (qs.length < count - (withMatch ? 1 : 0) && guard++ < 30) push(pick(its), opts.easy ? 'easy' : pick(['mid', 'mid', 'hard']));
     qs.sort((a, b) => a.d - b.d + (Math.random() - 0.5) * 1.4);
     spread(qs);
     if (withMatch) qs.splice(Math.floor(qs.length / 2), 0, matchQ(sample(its, Math.min(5, n))));
@@ -318,5 +318,20 @@
     return hira.concat(kata, n5, n4);
   }
 
-  JP.Q = { jpHtml, exampleHtml, sayOf, makeQ, planLesson, planReview, planBoss, planPlacement, endless, grammarQs, matchQ, canListen, build };
+  // 「認識日語文字」關卡的小測驗
+  function infoQuiz() {
+    const mk2 = (title, ans, wrong, why) => ({
+      type: 'choice', sub: 'info', itemId: null, d: 0, layout: 'list', title, prompt: {},
+      choices: shuffle([ans].concat(wrong)).map((c) => ({ html: esc(c), correct: c === ans, key: c })), reveal: { html: `<div class="rv-zh">${esc(why)}</div>` },
+    });
+    return shuffle([
+      mk2('寫外來語（例如 コーヒー）通常用哪種文字？', 'カタカナ', ['ひらがな', '漢字', '注音符號'], 'カタカナ 直直的，專門用來寫外來語。'),
+      mk2('五十音圖裡有幾個「母音」？', '5 個', ['3 個', '10 個', '46 個'], '母音是 あ い う え お，共 5 個。'),
+      mk2('ひらがな 的特色是？', '圓圓的，用來寫日語本身的字', ['直直的，用來寫外來語', '和中文一模一樣', '只用在課本裡'], 'ひらがな 是最先要學的文字。'),
+      mk2('「か」是由哪兩個部分組成？', 'k ＋ a', ['s ＋ a', 'k ＋ i', 't ＋ a'], '子音 k ＋ 母音 a ＝ か（ka）。'),
+      mk2('哪一個是平假名？', 'あ', ['ア', '日', 'ㄚ'], 'あ 是平假名，ア 是片假名，日 是漢字。'),
+    ]);
+  }
+
+  JP.Q = { infoQuiz, jpHtml, exampleHtml, sayOf, makeQ, planLesson, planReview, planBoss, planPlacement, endless, grammarQs, matchQ, canListen, build };
 })();
