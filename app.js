@@ -17,6 +17,12 @@
   };
   const sample = (a, n) => shuffle(a).slice(0, n);
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  // 單字圖例貼紙（資料在 illust.js）
+  const ILL = window.ILLUST || {};
+  const pic = (v, size) => {
+    const g = ILL[v.id] || '🌸';
+    return `<span class="sticker ${size || 'm'}${/^\d+$/.test(g) ? ' txt' : ''}" data-cat="${v.cat}" aria-hidden="true">${g}</span>`;
+  };
   const pad = (n) => String(n).padStart(2, '0');
   const dayKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const addDays = (key, n) => {
@@ -173,17 +179,20 @@
     const nextLesson = D.grammar.find((g) => !S.lessons[g.id]);
     const weak = Object.entries(S.kana).filter(([, k]) => k.w > k.c).length;
     app.innerHTML = `
-      <section class="card">
-        <p class="muted" style="margin-bottom:2px">${greeting()}</p>
-        <h1>今天也學一點日語吧</h1>
+      <section class="card hero">
+        <img class="mascot" src="icon.svg" alt="" width="84" height="84">
+        <div class="hero-t">
+          <p class="muted" style="margin-bottom:2px">${greeting()}</p>
+          <h1>今天也學一點日語吧</h1>
+        </div>
         <div class="goal"><div class="bar"><i style="width:${pct}%"></i></div><span>${dailyXP()} / ${S.goal} XP</span></div>
-        ${pct >= 100 ? '<p class="small" style="margin:8px 0 0;color:var(--ok)">✔ 今日目標達成！</p>' : ''}
+        ${pct >= 100 ? '<p class="small" style="margin:8px 0 0;color:var(--ok)">✔ 今日目標達成！太棒了 🎉</p>' : ''}
       </section>
       <section class="grid2">
-        <a class="card action primary" href="#/vocab/study"><span class="big-ico">語</span><h3>單字複習</h3><p>待複習 ${due} ・ 新單字 ${fresh}</p></a>
-        <a class="card action" href="#/kana/quiz"><span class="big-ico">あ</span><h3>五十音練習</h3><p>${weak ? `有 ${weak} 個弱點假名` : '選擇、輸入、聽力'}</p></a>
-        <a class="card action" href="#/vocab/quiz"><span class="big-ico">試</span><h3>單字測驗</h3><p>看字選義、聽音選義</p></a>
-        <a class="card action" href="#/grammar/${nextLesson ? nextLesson.id : ''}"><span class="big-ico">文</span><h3>${nextLesson ? '繼續文法課' : '文法複習'}</h3><p>${nextLesson ? esc(nextLesson.title) : '全部課程已完成 🎉'}</p></a>
+        <a class="card action primary" href="#/vocab/study"><span class="big-ico">🍙</span><h3>單字複習</h3><p>待複習 ${due} ・ 新單字 ${fresh}</p></a>
+        <a class="card action" href="#/kana/quiz"><span class="big-ico">🌸</span><h3>五十音練習</h3><p>${weak ? `有 ${weak} 個弱點假名` : '選擇、輸入、聽力'}</p></a>
+        <a class="card action" href="#/vocab/quiz"><span class="big-ico">🍡</span><h3>單字測驗</h3><p>看字選義、聽音選義</p></a>
+        <a class="card action" href="#/grammar/${nextLesson ? nextLesson.id : ''}"><span class="big-ico">🎀</span><h3>${nextLesson ? '繼續文法課' : '文法複習'}</h3><p>${nextLesson ? esc(nextLesson.title) : '全部課程已完成 🎉'}</p></a>
       </section>
       <section class="card">
         <h3>學習概況</h3>
@@ -307,8 +316,9 @@
       const shown = q.show || q.answer || q.answers[0];
       document.getElementById('fb').innerHTML = `
         <div class="fb ${ok ? 'right' : 'wrong'}">
-          <b>${ok ? '✔ 答對了！' : '✘ 正確答案：' + esc(shown)}</b>
-          ${q.note ? `<p>${esc(q.note)}</p>` : ''}
+          ${q.pic || ''}
+          <div class="fb-t"><b>${ok ? '✔ 答對了！' : '✘ 正確答案：' + esc(shown)}</b>
+          ${q.note ? `<p>${esc(q.note)}</p>` : ''}</div>
         </div>
         <div class="btn-row"><button class="btn primary block" id="next">${i + 1 >= qs.length ? '查看結果' : '下一題'}</button></div>`;
       const next = document.getElementById('next');
@@ -407,6 +417,7 @@
 
   /* ---------- 單字清單 ---------- */
   let vocabCat = 'all';
+  let vocabMode = 'grid';
   function viewVocab() {
     const due = dueCards().length;
     app.innerHTML = `
@@ -414,8 +425,9 @@
       <a class="card action primary" href="#/vocab/study" style="margin-bottom:14px"><h3>今日複習</h3><p>待複習 ${due} ・ 今日還可學 ${Math.min(newRemaining(), freshCards(99).length)} 個新單字</p></a>
       <input type="search" id="q" placeholder="搜尋日文、讀音或中文" aria-label="搜尋單字" style="margin-bottom:12px">
       <div class="filters" id="cats"></div>
-      <div class="card" style="padding:6px 14px"><ul class="wlist" id="list"></ul></div>`;
-    const list = document.getElementById('list');
+      <div class="mode-switch" role="group" aria-label="顯示方式"><button data-m="grid">🖼️ 圖鑑</button><button data-m="list">📋 清單</button></div>
+      <div id="vbox"></div>`;
+    const box$ = document.getElementById('vbox');
     const cats = document.getElementById('cats');
     const q = document.getElementById('q');
     const drawCats = () => {
@@ -425,14 +437,28 @@
     const drawList = () => {
       const t = q.value.trim().toLowerCase();
       const rows = D.vocab.filter((v) => (vocabCat === 'all' || v.cat === vocabCat) && (!t || (v.jp + v.kana + v.zh).toLowerCase().includes(t)));
-      list.innerHTML = rows.length ? rows.map((v) => {
+      app.querySelectorAll('.mode-switch button').forEach((b) => b.classList.toggle('on', b.dataset.m === vocabMode));
+      const dots = (v) => {
         const box = S.cards[v.id] ? S.cards[v.id].box : -1;
-        return `<li><button class="icon-btn" data-speak="${esc(v.kana)}" aria-label="播放 ${esc(v.jp)}">🔊</button>
-          <span class="jp">${esc(v.jp)}${v.kana !== v.jp ? `<span class="rd">${esc(v.kana)}</span>` : ''}</span>
-          <span class="zh">${esc(v.zh)}</span>
-          <span class="dots" title="熟練度">${[1, 2, 3, 4].map((n) => `<i class="${box >= n ? 'on' : ''}"></i>`).join('')}</span></li>`;
-      }).join('') : '<li class="muted">找不到符合的單字</li>';
+        return `<span class="dots" title="熟練度">${[1, 2, 3, 4].map((n) => `<i class="${box >= n ? 'on' : ''}"></i>`).join('')}</span>`;
+      };
+      if (!rows.length) { box$.innerHTML = '<div class="card muted">找不到符合的單字</div>'; return; }
+      box$.innerHTML = vocabMode === 'grid'
+        ? `<div class="vgrid">${rows.map((v) => `
+            <button class="vtile" data-speak="${esc(v.kana)}" aria-label="${esc(v.jp)} ${esc(v.zh)}，點擊播放">
+              ${pic(v, 'l')}
+              <b class="jp">${esc(v.jp)}</b>
+              ${v.kana !== v.jp ? `<span class="rd">${esc(v.kana)}</span>` : '<span class="rd">&nbsp;</span>'}
+              <span class="zh">${esc(v.zh)}</span>
+              ${dots(v)}
+            </button>`).join('')}</div>`
+        : `<div class="card" style="padding:6px 14px"><ul class="wlist">${rows.map((v) => `
+            <li>${pic(v, 's')}
+              <span class="jp">${esc(v.jp)}${v.kana !== v.jp ? `<span class="rd">${esc(v.kana)}</span>` : ''}</span>
+              <span class="zh">${esc(v.zh)}</span>${dots(v)}
+              <button class="icon-btn" data-speak="${esc(v.kana)}" aria-label="播放 ${esc(v.jp)}">🔊</button></li>`).join('')}</ul></div>`;
     };
+    app.querySelectorAll('.mode-switch button').forEach((b) => b.onclick = () => { vocabMode = b.dataset.m; drawList(); });
     q.oninput = drawList;
     drawCats(); drawList();
   }
@@ -467,6 +493,7 @@
           <span class="tag">${isNew ? '新單字 ・ ' : ''}${D.catNames[v.cat]}</span>
           <div class="jp">${esc(v.jp)}</div>
           <div id="back" hidden>
+            ${pic(v, 'xl')}
             ${v.kana !== v.jp ? `<div class="reading">${esc(v.kana)}</div>` : ''}
             <div class="zh">${esc(v.zh)}</div>
           </div>
@@ -580,7 +607,7 @@
           if (c) { c.box = 0; c.due = dayKey(); c.lapses++; save(); }
         }
       };
-      const common = { onAnswer, say: v.kana, note: `${label(v)} ＝ ${v.zh}` };
+      const common = { onAnswer, say: v.kana, note: `${label(v)} ＝ ${v.zh}`, pic: pic(v, 'm') };
       if (type === 'zh2jp') {
         return { ...common, kind: 'choice', label: '哪一個是日文？', prompt: v.zh, options: shuffle([label(v), ...distract(v, label)]), answer: label(v) };
       }

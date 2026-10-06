@@ -1,6 +1,6 @@
 /* 簡易離線快取：優先連線，失敗時使用快取 */
-const CACHE = 'nihongo-v1';
-const SHELL = ['./', 'index.html', 'style.css', 'data.js', 'app.js', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'nihongo-v2';
+const SHELL = ['./', 'index.html', 'style.css', 'data.js', 'illust.js', 'app.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

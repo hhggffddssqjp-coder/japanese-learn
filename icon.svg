@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#d9452b"/><text x="256" y="360" font-size="300" text-anchor="middle" fill="#fff" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif" font-weight="700">日</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#ffc2d4"/>
+  <circle cx="90" cy="90" r="28" fill="#fff" opacity=".55"/><circle cx="430" cy="130" r="18" fill="#fff" opacity=".55"/>
+  <circle cx="420" cy="420" r="30" fill="#fff" opacity=".45"/><circle cx="80" cy="410" r="16" fill="#fff" opacity=".55"/>
+  <path d="M256 92c28 0 52 18 72 52l72 124c36 62-6 128-76 128H188c-70 0-112-66-76-128l72-124c20-34 44-52 72-52z" fill="#fffaf3" stroke="#5b4553" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M196 322h120l18 78c-52 14-104 14-156 0z" fill="#46605a" stroke="#5b4553" stroke-width="14" stroke-linejoin="round"/>
+  <ellipse cx="206" cy="260" rx="15" ry="19" fill="#5b4553"/><ellipse cx="306" cy="260" rx="15" ry="19" fill="#5b4553"/>
+  <circle cx="201" cy="253" r="5" fill="#fff"/><circle cx="301" cy="253" r="5" fill="#fff"/>
+  <ellipse cx="166" cy="292" rx="22" ry="14" fill="#ff9fb8"/><ellipse cx="346" cy="292" rx="22" ry="14" fill="#ff9fb8"/>
+  <path d="M238 284q18 20 36 0" fill="none" stroke="#5b4553" stroke-width="10" stroke-linecap="round"/>
+</svg>
