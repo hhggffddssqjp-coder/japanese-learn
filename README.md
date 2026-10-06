@@ -20,6 +20,10 @@ python3 -m http.server 8000
 
 也可以直接用瀏覽器開啟 `index.html`（離線快取功能需要 http(s)）。
 
+## 部署（GitHub Pages）
+
+倉庫 Settings → Pages → Build and deployment：Source 選 **Deploy from a branch**，Branch 選 `main`（或要發佈的分支）、資料夾選 `/ (root)`，儲存後約 1 分鐘上線，網址為 `https://<帳號>.github.io/japanese-learn/`。所有路徑皆為相對路徑，可直接放在子路徑下。
+
 ## 結構
 
 | 檔案 | 說明 |
