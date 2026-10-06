@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>にほんご 日語學習</title>
+  <meta name="description" content="五十音、單字記憶卡、文法課與測驗的日語學習 App">
+  <meta name="theme-color" content="#d9452b">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#/home"><span class="logo">日</span><span>にほんご</span></a>
+    <div class="chips">
+      <span class="chip" title="連續學習天數">🔥 <b id="h-streak">0</b></span>
+      <span class="chip" title="等級">Lv <b id="h-level">1</b></span>
+    </div>
+  </header>
+
+  <main id="app" tabindex="-1"><noscript>請開啟 JavaScript 以使用本應用程式。</noscript></main>
+
+  <nav class="tabs" aria-label="主選單">
+    <a href="#/home" data-tab="home"><i>家</i><span>首頁</span></a>
+    <a href="#/kana" data-tab="kana"><i>あ</i><span>五十音</span></a>
+    <a href="#/vocab" data-tab="vocab"><i>語</i><span>單字</span></a>
+    <a href="#/grammar" data-tab="grammar"><i>文</i><span>文法</span></a>
+    <a href="#/me" data-tab="me"><i>我</i><span>我的</span></a>
+  </nav>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
