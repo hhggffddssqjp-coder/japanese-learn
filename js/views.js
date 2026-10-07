@@ -356,7 +356,7 @@
         ${sw('furi', '顯示振假名', '在漢字上方顯示假名讀音')}
         <div class="setrow"><div><b>日語語音</b><small id="voice-note">${JP.tts.hasJa ? `偵測到 ${voices.length} 個日語語音` : JP.tts.ok ? '尚未偵測到日語語音' : '此瀏覽器不支援語音'}</small></div><div class="voice-box">${voiceSel}<button type="button" class="btn btn-sm" data-act="testvoice">試聽</button></div></div>
         <details class="voice-help" ${JP.tts.hasJa ? '' : 'open'}><summary>沒有聲音？如何安裝日語語音</summary><ul>
-          <li><b>iPhone / iPad</b>：設定 → 輔助使用 → 語音內容 → 聲音 → 日文，下載一個聲音。</li>
+          <li><b>iPhone / iPad</b>：設定 → 輔助使用 → 語音內容 → 聲音 → 日文，下載一個聲音。<b>側邊的靜音開關要關掉（不要露出橘色）</b>，音量調大；按「試聽」沒聲音時，先重新整理頁面再試一次。</li>
           <li><b>Android</b>：設定 → 系統 → 語言 → 文字轉語音輸出，安裝「日文」語音資料。</li>
           <li><b>Windows</b>：設定 → 時間與語言 → 語音，新增「日本語」語音套件；建議使用 Edge 瀏覽器。</li>
           <li><b>macOS</b>：系統設定 → 輔助使用 → 語音內容 → 系統語音，新增日文語音（如 Kyoko）。</li>
@@ -375,23 +375,26 @@
   function syncCard() {
     const y = JP.sync;
     if (!y || !y.enabled) {
-      return `<section class="card sync"><h3>雲端同步 <small class="muted">尚未啟用</small></h3><p class="muted small">啟用後可用 Google 帳號在手機、電腦之間自動同步進度。需要先建立免費的 Firebase 專案，步驟請看專案裡的 <code>docs/firebase-setup.md</code>。目前進度只存在這個瀏覽器，請定期匯出備份。</p></section>`;
+      return `<section class="card sync" id="sync-card"><h3>雲端同步 <small class="muted">尚未啟用</small></h3><p class="muted small">啟用後可用 Google 帳號在手機、電腦之間自動同步進度。需要先建立免費的 Firebase 專案，步驟請看專案裡的 <code>docs/firebase-setup.md</code>。目前進度只存在這個瀏覽器，請定期匯出備份。</p></section>`;
     }
     if (!y.user) {
       const busy = y.status === 'loading' || y.status === 'syncing';
-      return `<section class="card sync"><h3>雲端同步</h3><p class="muted small">用 Google 帳號登入後，進度會自動備份到雲端，換手機或電腦也能接著學。</p>${y.error ? `<p class="sync-err">${esc(y.error)}</p>` : ''}<button type="button" class="btn btn-big" data-act="signin"${busy ? ' disabled' : ''}>${busy ? '請稍候…' : '使用 Google 登入並同步'}</button></section>`;
+      return `<section class="card sync" id="sync-card"><h3>雲端同步</h3><p class="muted small">用 Google 帳號登入後，進度會自動備份到雲端，換手機或電腦也能接著學。</p>${y.error ? `<p class="sync-err">${esc(y.error)}</p>` : ''}<button type="button" class="btn btn-big" data-act="signin"${busy ? ' disabled' : ''}>${busy ? '請稍候…' : '使用 Google 登入並同步'}</button></section>`;
     }
     const st = y.status === 'syncing' ? '同步中…' : y.status === 'error' ? '' : y.last ? `已同步・${ago(y.last)}` : '已登入';
-    return `<section class="card sync"><h3>雲端同步 <small class="sync-on">已開啟</small></h3>
+    return `<section class="card sync" id="sync-card"><h3>雲端同步 <small class="sync-on">已開啟</small></h3>
       <div class="sync-user">${y.user.photo ? `<img src="${esc(y.user.photo)}" alt="" referrerpolicy="no-referrer">` : '<span class="sync-av">👤</span>'}<div><b>${esc(y.user.name || '已登入')}</b><small>${esc(y.user.email)}</small></div></div>
       <p class="${y.status === 'error' ? 'sync-err' : 'muted small'}">${y.status === 'error' ? esc(y.error) : st}</p>
       <div class="btn-row wrap"><button type="button" class="btn btn-sm" data-act="syncnow">立即同步</button><button type="button" class="btn btn-sm" data-act="signout">登出</button></div></section>`;
   }
 
-  function testVoice() {
+  async function testVoice() {
     if (!JP.tts.ok) return toast('此瀏覽器不支援語音');
     if (!JP.tts.hasJa) toast('找不到日語語音，聲音可能不是日語');
-    JP.tts.speak('こんにちは。にほんごを べんきょう しましょう。');
+    else toast('🔊 播放中…（聽不到的話，請看下方「沒有聲音？」）');
+    const ok = await JP.tts.speak('こんにちは。にほんごを べんきょう しましょう。');
+    const err = JP.tts.lastError;
+    if (!ok && err && !/cancel|interrupt/i.test(err)) toast(`播放失敗（${esc(err)}）。請確認音量、靜音開關，或換一個語音`, 4500);
   }
 
   function exportData() {
@@ -557,8 +560,24 @@
       if (t.id === 'import-file' && t.files[0]) importData(t.files[0]);
     });
     main().addEventListener('input', (e) => { if (e.target.id === 'dex-q') { dexState.q = e.target.value; renderDexBody(); } });
-    JP.on('sync', () => { if (currentRoute === 'me' && !document.querySelector('.overlay.open')) refresh(); else updateChips(); });
-    JP.on('voices', () => { if (currentRoute === 'me' || currentRoute === 'practice') { if (!document.querySelector('.overlay.open')) refresh(); } else if (currentRoute === 'learn' && !document.querySelector('.overlay.open')) { const b = main().querySelector('.map-col'); if (b) { const old = b.querySelector('.banner.warn'); const nb = voiceBanner(); if (old && !nb) old.remove(); else if (!old && nb) b.insertAdjacentHTML('afterbegin', nb); } } });
+    JP.on('sync', () => {
+      const el = document.getElementById('sync-card');
+      if (currentRoute === 'me' && el && !document.querySelector('.overlay.open')) el.outerHTML = syncCard();
+      updateChips();
+    });
+    JP.on('voices', () => {
+      if (document.querySelector('.overlay.open')) return;
+      if (currentRoute === 'me') {
+        const note = document.getElementById('voice-note'), box = document.querySelector('.voice-box');
+        if (note && box) {
+          const vs = JP.tts.list();
+          note.textContent = JP.tts.hasJa ? `偵測到 ${vs.length} 個日語語音` : JP.tts.ok ? '尚未偵測到日語語音' : '此瀏覽器不支援語音';
+          const cur = JP.tts.current();
+          const sel = box.querySelector('select');
+          if (sel) sel.innerHTML = vs.map((v) => `<option value="${esc(v.name)}"${cur && cur.name === v.name ? ' selected' : ''}>${esc(v.name)}</option>`).join('');
+        }
+      } else if (currentRoute === 'practice') refresh();
+      else if (currentRoute === 'learn' && !document.querySelector('.overlay.open')) { const b = main().querySelector('.map-col'); if (b) { const old = b.querySelector('.banner.warn'); const nb = voiceBanner(); if (old && !nb) old.remove(); else if (!old && nb) b.insertAdjacentHTML('afterbegin', nb); } } });
   }
 
   JP.views = { route, refresh, updateChips, applyTheme, showWelcome, bind, launch };
