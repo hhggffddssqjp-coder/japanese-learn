@@ -109,11 +109,13 @@
   const S = loadState();
   JP.S = S;
   let saveTimer = 0;
-  function save() {
+  function save(opt) {
+    S.mt = Date.now();
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* 隱私模式略過 */ }
+    JP.emit && JP.emit('saved', opt);
   }
   function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); }
-  window.addEventListener('pagehide', save);
+  window.addEventListener('pagehide', () => save({ noSync: true }));
 
   /* ───────────── 等級、經驗值、連勝 ───────────── */
   const needFor = (lv) => 100 + 25 * (lv - 1);

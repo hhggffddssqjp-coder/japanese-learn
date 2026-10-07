@@ -344,6 +344,7 @@
         <div><b>${S.bestStreak}</b><span>最長連勝（天）</span></div><div><b>${S.stats.bestCombo}</b><span>最高連擊</span></div></div></section>
       <section class="card"><h3>朱印帳 <small class="muted">通關每個世界的鬼關，蓋下一枚朱印</small></h3><div class="stamps">${stamps}</div></section>
       <section class="card"><h3>成就 <small class="muted">${Object.keys(S.ach).length} / ${JP.ACH.length}</small></h3><div class="achs">${ach}</div></section>
+      ${syncCard()}
       <section class="card settings" id="settings"><h3>設定</h3>
         <div class="setrow col"><div><b>每日目標</b><small>每天賺到的經驗值（XP）</small></div><div class="seg-tabs small" id="goal-seg">${[[30, '輕鬆 30'], [50, '一般 50'], [100, '認真 100']].map(([n, l]) => `<button type="button" class="${S.goal === n ? 'on' : ''}" data-goal="${n}">${l}</button>`).join('')}</div></div>
         <div class="setrow col"><div><b>外觀</b></div><div class="seg-tabs small">${[['auto', '跟隨系統'], ['light', '淺色'], ['dark', '深色']].map(([k, l]) => `<button type="button" class="${S.set.theme === k ? 'on' : ''}" data-theme="${k}">${l}</button>`).join('')}</div></div>
@@ -361,10 +362,30 @@
           <li><b>macOS</b>：系統設定 → 輔助使用 → 語音內容 → 系統語音，新增日文語音（如 Kyoko）。</li>
           <li>語音由瀏覽器／系統提供，完全離線可用，不會上傳任何資料。</li></ul></details>
       </section>
-      <section class="card"><h3>資料</h3><p class="muted small">進度只儲存在這個瀏覽器裡，換裝置前請先匯出備份。</p>
+      <section class="card"><h3>資料</h3><p class="muted small">${JP.sync && JP.sync.user ? '已開啟雲端同步；匯出檔仍可當作額外備份。' : '進度只儲存在這個瀏覽器裡，換裝置前請先匯出備份。'}</p>
         <div class="btn-row wrap"><button type="button" class="btn btn-sm" data-act="export">匯出備份</button><button type="button" class="btn btn-sm" data-act="import">匯入備份</button><button type="button" class="btn btn-sm" data-act="replace">重新選擇程度</button><button type="button" class="btn btn-sm danger" data-act="reset">清除所有進度</button></div>
         <input type="file" id="import-file" accept="application/json" hidden></section>
     </div>`;
+  }
+
+  function ago(t) {
+    const m = Math.round((Date.now() - t) / 60000);
+    return m < 1 ? '剛剛' : m < 60 ? `${m} 分鐘前` : `${Math.round(m / 60)} 小時前`;
+  }
+  function syncCard() {
+    const y = JP.sync;
+    if (!y || !y.enabled) {
+      return `<section class="card sync"><h3>雲端同步 <small class="muted">尚未啟用</small></h3><p class="muted small">啟用後可用 Google 帳號在手機、電腦之間自動同步進度。需要先建立免費的 Firebase 專案，步驟請看專案裡的 <code>docs/firebase-setup.md</code>。目前進度只存在這個瀏覽器，請定期匯出備份。</p></section>`;
+    }
+    if (!y.user) {
+      const busy = y.status === 'loading' || y.status === 'syncing';
+      return `<section class="card sync"><h3>雲端同步</h3><p class="muted small">用 Google 帳號登入後，進度會自動備份到雲端，換手機或電腦也能接著學。</p>${y.error ? `<p class="sync-err">${esc(y.error)}</p>` : ''}<button type="button" class="btn btn-big" data-act="signin"${busy ? ' disabled' : ''}>${busy ? '請稍候…' : '使用 Google 登入並同步'}</button></section>`;
+    }
+    const st = y.status === 'syncing' ? '同步中…' : y.status === 'error' ? '' : y.last ? `已同步・${ago(y.last)}` : '已登入';
+    return `<section class="card sync"><h3>雲端同步 <small class="sync-on">已開啟</small></h3>
+      <div class="sync-user">${y.user.photo ? `<img src="${esc(y.user.photo)}" alt="" referrerpolicy="no-referrer">` : '<span class="sync-av">👤</span>'}<div><b>${esc(y.user.name || '已登入')}</b><small>${esc(y.user.email)}</small></div></div>
+      <p class="${y.status === 'error' ? 'sync-err' : 'muted small'}">${y.status === 'error' ? esc(y.error) : st}</p>
+      <div class="btn-row wrap"><button type="button" class="btn btn-sm" data-act="syncnow">立即同步</button><button type="button" class="btn btn-sm" data-act="signout">登出</button></div></section>`;
   }
 
   function testVoice() {
@@ -398,7 +419,8 @@
   }
   function resetData() {
     const m = modal(`<div class="confirm"><h3>清除所有進度？</h3><p>經驗值、連勝、單字收集與成就都會消失，無法復原。建議先匯出備份。</p><div class="btn-row"><button type="button" class="btn btn-big" data-close autofocus>取消</button><button type="button" class="btn btn-ghost danger" data-act="yes">確定清除</button></div></div>`);
-    m.el.querySelector('[data-act="yes"]').addEventListener('click', () => {
+    m.el.querySelector('[data-act="yes"]').addEventListener('click', async () => {
+      if (JP.sync && JP.sync.user) await JP.sync.wipe();
       try { localStorage.removeItem('jpl.v2'); localStorage.removeItem('jpl.v1'); } catch (e) { /* 略過 */ }
       location.reload();
     });
@@ -432,6 +454,7 @@
       <h3>你的日語程度？</h3>
       <div class="lvl-list" role="radiogroup">${levels.map(([w, e, t, d], i) => `<button type="button" class="lvl-opt ${i === 0 ? 'on' : ''}" role="radio" aria-checked="${i === 0}" data-lvl="${w}"><span>${e}</span><div><b>${t}</b><small>${d}</small></div></button>`).join('')}</div>
       <button type="button" class="link-btn" data-act="placement">不確定？做個 2 分鐘的程度測驗 ›</button>
+      ${JP.sync && JP.sync.enabled ? '<button type="button" class="link-btn" data-act="signin">已經學過了？登入 Google 還原進度</button>' : ''}
       <h3>每日目標</h3>
       <div class="seg-tabs" id="wel-goal">${[[30, '輕鬆', '30 XP'], [50, '一般', '50 XP'], [100, '認真', '100 XP']].map(([n, l, x]) => `<button type="button" class="${n === goal ? 'on' : ''}" data-goal="${n}">${l}<small>${x}</small></button>`).join('')}</div>
       <button type="button" class="btn btn-big" data-act="begin">開始冒險</button>
@@ -443,6 +466,14 @@
       if (b.dataset.lvl !== undefined) { lvl = b.dataset.lvl; root.querySelectorAll('.lvl-opt').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); }
       else if (b.dataset.goal) { goal = +b.dataset.goal; root.querySelectorAll('#wel-goal button').forEach((x) => x.classList.toggle('on', x === b)); }
       else if (b.dataset.act === 'cancel') close();
+      else if (b.dataset.act === 'signin') {
+        await JP.sync.signIn();
+        const t0 = Date.now();
+        while (JP.sync.status === 'syncing' && Date.now() - t0 < 15000) await new Promise((r) => setTimeout(r, 200));
+        if (S.onboarded) { close(); viewLearn.shown = false; refresh(); updateChips(); toast('已還原你的進度'); }
+        else if (JP.sync.status === 'error') toast(JP.sync.error);
+        else toast('已登入，雲端還沒有進度，請先選擇程度開始');
+      }
       else if (b.dataset.act === 'begin') {
         S.goal = goal; S.onboarded = true;
         if (lvl !== 'intro') JP.startAtWorld(lvl);
@@ -510,6 +541,9 @@
       if ((el = t.closest('[data-act]'))) {
         const a = el.dataset.act;
         if (a === 'testvoice') return testVoice();
+        if (a === 'signin') return JP.sync.signIn();
+        if (a === 'signout') return JP.sync.signOut().then(() => toast('已登出，進度仍保留在這個瀏覽器'));
+        if (a === 'syncnow') return JP.sync.now().then(() => toast(JP.sync.status === 'error' ? JP.sync.error : '已同步'));
         if (a === 'export') return exportData();
         if (a === 'import') return document.getElementById('import-file').click();
         if (a === 'reset') return resetData();
@@ -523,6 +557,7 @@
       if (t.id === 'import-file' && t.files[0]) importData(t.files[0]);
     });
     main().addEventListener('input', (e) => { if (e.target.id === 'dex-q') { dexState.q = e.target.value; renderDexBody(); } });
+    JP.on('sync', () => { if (currentRoute === 'me' && !document.querySelector('.overlay.open')) refresh(); else updateChips(); });
     JP.on('voices', () => { if (currentRoute === 'me' || currentRoute === 'practice') { if (!document.querySelector('.overlay.open')) refresh(); } else if (currentRoute === 'learn' && !document.querySelector('.overlay.open')) { const b = main().querySelector('.map-col'); if (b) { const old = b.querySelector('.banner.warn'); const nb = voiceBanner(); if (old && !nb) old.remove(); else if (!old && nb) b.insertAdjacentHTML('afterbegin', nb); } } });
   }
 
