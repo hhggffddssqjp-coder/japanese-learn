@@ -1,13 +1,13 @@
 {
-  "name": "にほんご 日語學習",
+  "name": "にほんご冒險",
   "short_name": "にほんご",
-  "description": "五十音、單字記憶卡、文法課與測驗",
+  "description": "闖關式日語學習：單字圖鑑、發音、連勝與等級",
   "lang": "zh-Hant",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f7f3ec",
-  "theme_color": "#d9452b",
+  "background_color": "#f6efe2",
+  "theme_color": "#e2452f",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
