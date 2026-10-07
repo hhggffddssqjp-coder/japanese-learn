@@ -18,7 +18,7 @@
   });
 
   // 第一次互動後解鎖音效（瀏覽器的自動播放限制）
-  ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, () => JP.sfx.unlock(), { once: true, capture: true }));
+  ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, () => { JP.sfx.unlock(); JP.tts.unlock(); }, { once: true, capture: true }));
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && JP.ui.closeTop()) e.stopPropagation();

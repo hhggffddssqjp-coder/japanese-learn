@@ -238,22 +238,29 @@
       return new Promise((resolve) => {
         if (!hasTTS || !text) return resolve(false);
         try {
-          speechSynthesis.cancel();
+          tts.lastError = '';
           const u = new SpeechSynthesisUtterance(text);
           u.lang = 'ja-JP';
           const v = tts.current();
           if (v) u.voice = v;
           const slow = opts.slow !== undefined ? opts.slow : S.set.slow;
           u.rate = slow ? 0.6 : 0.95;
-          u.pitch = 1.05;
           let done = false;
           const fin = (r) => { if (!done) { done = true; resolve(r); } };
           u.onend = () => fin(true);
-          u.onerror = () => fin(false);
+          u.onerror = (e) => { tts.lastError = (e && e.error) || 'error'; fin(false); };
           setTimeout(() => fin(false), 8000);
-          speechSynthesis.speak(u);
-        } catch (e) { resolve(false); }
+          const go = () => { try { speechSynthesis.resume(); } catch (e) { /* 略過 */ } speechSynthesis.speak(u); };
+          // iOS Safari：cancel() 之後立刻 speak() 會被吞掉，所以只有在正在播放時才取消並稍等
+          if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); setTimeout(go, 90); } else go();
+        } catch (e) { tts.lastError = 'error'; resolve(false); }
       });
+    },
+    // 第一次互動時「解鎖」語音（iOS 規定要在使用者操作中啟動過）
+    unlock() {
+      if (!hasTTS || tts._unlocked) return;
+      tts._unlocked = true;
+      try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) { /* 略過 */ }
     },
   };
   if (hasTTS) {
