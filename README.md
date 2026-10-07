@@ -12,6 +12,7 @@
 - **成就感系統**：經驗值與等級、每日連勝（含連勝凍結）、答題連擊、三星評價、每日目標、成就徽章、朱印帳、單字圖鑑（未收集顯示為剪影）、櫻花紙吹雪與音效
 - **記憶科學**：間隔重複（SRS）每日複習、弱點加強、閃電挑戰
 - **PWA**：可加入主畫面、離線使用；深色模式；可匯出／匯入進度
+- **雲端同步（選用）**：Google 登入＋Firebase，進度以合併方式在多裝置同步，設定步驟見 [`docs/firebase-setup.md`](docs/firebase-setup.md)
 
 ## 執行
 
@@ -36,6 +37,7 @@ Settings → Pages → Deploy from a branch → 選擇分支與 `/ (root)`。所
 | `js/curriculum.js` | 世界與關卡組成、解鎖與跳級 |
 | `js/questions.js` | 題型產生器與出題規劃 |
 | `js/player.js` | 教學卡、答題、回饋、結算畫面 |
+| `js/sync.js`, `js/sync-config.js` | 選用的雲端同步（Firebase）與其設定 |
 | `js/views.js`, `js/ui.js`, `js/app.js` | 地圖／圖鑑／練習／個人頁、對話框與特效、啟動 |
 
 ## 擴充內容

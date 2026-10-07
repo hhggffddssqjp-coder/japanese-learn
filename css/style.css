@@ -486,3 +486,9 @@ button.banner { cursor: pointer; transition: transform .12s; } button.banner:hov
 .info-vowels b { display: block; font-size: 2.2rem; line-height: 1.2; color: var(--wc, var(--shu)); } .info-vowels small { color: var(--muted); font-weight: 800; font-size: 1.1rem; }
 .info-list { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 12px; } .info-list li { background: var(--paper-2); border-radius: 16px; padding: 12px 14px; line-height: 1.55; }
 .tcard.info .gt td small { color: var(--muted); }
+
+/* 雲端同步 */
+.sync h3 small { font-size: .75rem; font-weight: 700; } .sync-on { color: var(--ok-d); background: var(--ok-soft); border-radius: 999px; padding: 1px 10px; }
+.sync-user { display: flex; align-items: center; gap: 12px; margin: 6px 0; } .sync-user img, .sync-av { width: 44px; height: 44px; border-radius: 50%; background: var(--paper-2); display: grid; place-items: center; object-fit: cover; }
+.sync-user b { display: block; } .sync-user small { color: var(--muted); }
+.sync-err { color: var(--shu); font-weight: 700; font-size: .9rem; } code { background: var(--paper-2); border-radius: 6px; padding: 1px 6px; font-size: .85em; }
