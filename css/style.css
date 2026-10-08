@@ -492,3 +492,4 @@ button.banner { cursor: pointer; transition: transform .12s; } button.banner:hov
 .sync-user { display: flex; align-items: center; gap: 12px; margin: 6px 0; } .sync-user img, .sync-av { width: 44px; height: 44px; border-radius: 50%; background: var(--paper-2); display: grid; place-items: center; object-fit: cover; }
 .sync-user b { display: block; } .sync-user small { color: var(--muted); }
 .sync-err { color: var(--shu); font-weight: 700; font-size: .9rem; } code { background: var(--paper-2); border-radius: 6px; padding: 1px 6px; font-size: .85em; }
+.setrow small.voice-hint { margin-top: 2px; color: var(--ai); font-weight: 700; }
