@@ -377,7 +377,7 @@ button.banner { cursor: pointer; transition: transform .12s; } button.banner:hov
 .spk { display: inline-grid; place-items: center; border: 0; border-radius: 50%; background: var(--ai-soft); color: var(--ai); flex: none; transition: transform .1s; vertical-align: middle; }
 .spk:active { transform: scale(.92); } .spk.inline { width: 34px; height: 34px; margin-left: 6px; } .spk.inline .ic { width: 18px; height: 18px; }
 .spk.big { width: 74px; height: 74px; background: var(--ai); color: #fff; box-shadow: 0 5px 0 var(--ai-d); } .spk.big .ic { width: 36px; height: 36px; } .spk.big:active { transform: translateY(4px); box-shadow: none; }
-.spk.slow { width: 54px; height: 54px; background: var(--ai-soft); box-shadow: 0 4px 0 var(--line-d); } .spk .turtle { font-size: 1.6rem; line-height: 1; }
+.spk.slow { width: 54px; height: 54px; background: var(--ai-soft); box-shadow: 0 4px 0 var(--line-d); } .spk .slow-t { font-size: 1.15rem; font-weight: 900; line-height: 1; color: var(--ai); }
 .spk.playing { animation: ping 1s ease-in-out infinite; } @keyframes ping { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ai) 50%, transparent); } 50% { box-shadow: 0 0 0 10px transparent; } }
 
 /* 題目 */
