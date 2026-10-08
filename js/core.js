@@ -222,13 +222,21 @@
   let voices = [];
   const tts = {
     ok: hasTTS, hasJa: false,
+    // 語音品質分級：0＝類神經／雲端自然語音（最好）、1＝強化／進階語音、2＝一般內建語音、3＝其他
+    quality(v) {
+      const n = v.name || '';
+      if (/natural|neural|online/i.test(n)) return 0;
+      if (/premium|enhanced|siri|nanami|keita|otoya|o-?ren|google|network/i.test(n) || v.localService === false) return 1;
+      if (/kyoko|haruka|ayumi|sayaka|ichiro|hattori|mizuki|japanese|日本/i.test(n)) return 2;
+      return 3;
+    },
     refresh() {
       if (!hasTTS) return;
       voices = speechSynthesis.getVoices().filter((v) => /^ja/i.test(v.lang));
-      // 偏好品質較好的語音
-      const rank = (v) => (/Kyoko|Nanami|Haruka|Ayumi|O-Ren|Siri|Premium|Enhanced|Google/i.test(v.name) ? 0 : 1) + (v.localService ? 0.5 : 0);
-      voices.sort((a, b) => rank(a) - rank(b));
+      // 品質好的排前面（預設會自動使用第一個）
+      voices = voices.map((v, i) => ({ v, i })).sort((a, b) => tts.quality(a.v) - tts.quality(b.v) || a.i - b.i).map((x) => x.v);
       tts.hasJa = voices.length > 0;
+      tts.best = voices.length ? tts.quality(voices[0]) : 9;
       JP.emit('voices');
     },
     list() { return voices; },
@@ -244,7 +252,7 @@
           const v = tts.current();
           if (v) u.voice = v;
           const slow = opts.slow !== undefined ? opts.slow : S.set.slow;
-          u.rate = slow ? 0.6 : 0.95;
+          u.rate = slow ? 0.6 : 0.9;
           let done = false;
           const fin = (r) => { if (!done) { done = true; resolve(r); } };
           u.onend = () => fin(true);

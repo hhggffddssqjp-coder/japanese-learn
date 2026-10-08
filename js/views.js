@@ -329,7 +329,7 @@
     }).join('');
     const ach = JP.ACH.map((a) => `<div class="ach ${S.ach[a.id] ? 'got' : ''}" title="${esc(a.desc)}"><span>${a.em}</span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></div>`).join('');
     const voices = JP.tts.list();
-    const voiceSel = voices.length ? `<select id="set-voice" aria-label="選擇語音">${voices.map((v) => `<option value="${esc(v.name)}"${(JP.tts.current() && JP.tts.current().name === v.name) ? ' selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : `<span class="muted">未偵測到</span>`;
+    const voiceSel = voices.length ? `<select id="set-voice" aria-label="選擇語音">${voiceOpts()}</select>` : `<span class="muted">未偵測到</span>`;
     const sw = (key, label, desc) => `<label class="setrow"><div><b>${label}</b>${desc ? `<small>${desc}</small>` : ''}</div><input type="checkbox" class="switch" data-set="${key}" ${S.set[key] ? 'checked' : ''}></label>`;
     main().innerHTML = `<div class="page me">
       <section class="card profile">
@@ -354,12 +354,13 @@
         ${sw('haptic', '震動回饋', '手機上答題時震動')}
         ${sw('romaji', '顯示羅馬拼音', '在單字下方顯示 Romaji')}
         ${sw('furi', '顯示振假名', '在漢字上方顯示假名讀音')}
-        <div class="setrow"><div><b>日語語音</b><small id="voice-note">${JP.tts.hasJa ? `偵測到 ${voices.length} 個日語語音` : JP.tts.ok ? '尚未偵測到日語語音' : '此瀏覽器不支援語音'}</small></div><div class="voice-box">${voiceSel}<button type="button" class="btn btn-sm" data-act="testvoice">試聽</button></div></div>
-        <details class="voice-help" ${JP.tts.hasJa ? '' : 'open'}><summary>沒有聲音？如何安裝日語語音</summary><ul>
-          <li><b>iPhone / iPad</b>：設定 → 輔助使用 → 語音內容 → 聲音 → 日文，下載一個聲音。<b>側邊的靜音開關要關掉（不要露出橘色）</b>，音量調大；按「試聽」沒聲音時，先重新整理頁面再試一次。</li>
-          <li><b>Android</b>：設定 → 系統 → 語言 → 文字轉語音輸出，安裝「日文」語音資料。</li>
-          <li><b>Windows</b>：設定 → 時間與語言 → 語音，新增「日本語」語音套件；建議使用 Edge 瀏覽器。</li>
-          <li><b>macOS</b>：系統設定 → 輔助使用 → 語音內容 → 系統語音，新增日文語音（如 Kyoko）。</li>
+        <div class="setrow"><div><b>日語語音</b><small id="voice-note">${JP.tts.hasJa ? `偵測到 ${voices.length} 個日語語音` : JP.tts.ok ? '尚未偵測到日語語音' : '此瀏覽器不支援語音'}</small><small id="voice-hint" class="voice-hint">${voiceHint()}</small></div><div class="voice-box">${voiceSel}<button type="button" class="btn btn-sm" data-act="testvoice">試聽</button></div></div>
+        <details class="voice-help" ${JP.tts.hasJa && JP.tts.best <= 1 ? '' : 'open'}><summary>沒有聲音，或聲音不自然？如何取得更好的日語語音</summary><ul>
+          <li><b>發音品質差別很大</b>：名稱含 <b>Natural／Online／Enhanced／Premium／Siri</b> 的是高品質語音（類神經網路），其他多半是機械感較重的基本語音。</li>
+          <li><b>iPhone / iPad</b>：設定 → 輔助使用 → 語音內容 → 聲音 → 日文，選 <b>Kyoko 或 Otoya</b>，點旁邊的雲朵圖示下載<b>「強化」（Enhanced）或「Siri」</b>版本，再回到這裡選它。<b>側邊的靜音開關要關掉（不要露出橘色）</b>，音量調大；按「試聽」沒聲音時，先重新整理頁面再試一次。</li>
+          <li><b>Android</b>：設定 → 系統 → 語言 → 文字轉語音輸出，使用「Google 語音服務」並下載日文語音資料；網路版（network）語音品質較好。</li>
+          <li><b>Windows</b>：<b>用 Edge 瀏覽器</b>就能選到免費的 <b>Microsoft Nanami Online (Natural)</b>，是目前最自然的日語語音；Chrome 看不到這些語音。也可到 設定 → 時間與語言 → 語音 新增「日本語」。</li>
+          <li><b>macOS</b>：系統設定 → 輔助使用 → 語音內容 → 系統語音 → 管理語音，下載日文的「強化」或「Siri」語音（如 Kyoko、Otoya）。</li>
           <li>語音由瀏覽器／系統提供，完全離線可用，不會上傳任何資料。</li></ul></details>
       </section>
       <section class="card"><h3>資料</h3><p class="muted small">${JP.sync && JP.sync.user ? '已開啟雲端同步；匯出檔仍可當作額外備份。' : '進度只儲存在這個瀏覽器裡，換裝置前請先匯出備份。'}</p>
@@ -368,6 +369,14 @@
     </div>`;
   }
 
+  const voiceOpts = () => {
+    const cur = JP.tts.current();
+    return JP.tts.list().map((v) => `<option value="${esc(v.name)}"${cur && cur.name === v.name ? ' selected' : ''}>${JP.tts.quality(v) <= 1 ? '★ ' : ''}${esc(v.name)}</option>`).join('');
+  };
+  const voiceHint = () => {
+    if (!JP.tts.hasJa) return '';
+    return JP.tts.best <= 1 ? '★ 表示高品質語音，已自動選用。' : '目前只有基本品質的語音，發音比較機械。想要更自然的聲音，請看下方「如何取得更好的語音」。';
+  };
   function ago(t) {
     const m = Math.round((Date.now() - t) / 60000);
     return m < 1 ? '剛剛' : m < 60 ? `${m} 分鐘前` : `${Math.round(m / 60)} 小時前`;
@@ -572,9 +581,10 @@
         if (note && box) {
           const vs = JP.tts.list();
           note.textContent = JP.tts.hasJa ? `偵測到 ${vs.length} 個日語語音` : JP.tts.ok ? '尚未偵測到日語語音' : '此瀏覽器不支援語音';
-          const cur = JP.tts.current();
           const sel = box.querySelector('select');
-          if (sel) sel.innerHTML = vs.map((v) => `<option value="${esc(v.name)}"${cur && cur.name === v.name ? ' selected' : ''}>${esc(v.name)}</option>`).join('');
+          if (sel) sel.innerHTML = voiceOpts();
+          const hint = document.getElementById('voice-hint');
+          if (hint) hint.textContent = voiceHint();
         }
       } else if (currentRoute === 'practice') refresh();
       else if (currentRoute === 'learn' && !document.querySelector('.overlay.open')) { const b = main().querySelector('.map-col'); if (b) { const old = b.querySelector('.banner.warn'); const nb = voiceBanner(); if (old && !nb) old.remove(); else if (!old && nb) b.insertAdjacentHTML('afterbegin', nb); } } });
