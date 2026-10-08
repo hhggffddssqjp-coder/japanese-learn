@@ -140,7 +140,10 @@
     if (node.type === 'boss') return { kind: 'boss', title: node.title, node, hearts: 3, questions: Q.planBoss(node) };
     if (node.type === 'info') return { kind: 'grammar', title: node.title, node, teachPages: node.pages, questions: Q.infoQuiz() };
     if (node.type === 'grammar') { const g = JP.gmap.get(node.gid); return { kind: 'grammar', title: node.title, node, teachGrammar: g, questions: Q.grammarQs(g, 8) }; }
-    return { kind: 'lesson', title: node.title, node, teachIds: node.noTeach ? [] : node.items, questions: Q.planLesson(node.items, { easy: !!node.easy }) };
+    const pr = S.nodes[node.id] || {};
+    const level = pr.stars >= 3 ? 2 : (pr.plays || 0) >= 1 ? 1 : 0;
+    const extra = shuffle(JP.NODES.filter((n) => n.idx < node.idx && n.items.length).flatMap((n) => n.items).filter((id) => S.cards[id] && !node.items.includes(id))).slice(0, 6);
+    return { kind: 'lesson', title: node.title, node, teachIds: node.noTeach ? [] : node.items, questions: Q.planLesson(node.items, { easy: !!node.easy, level, extra }) };
   }
   const runNode = (node) => launch(() => nodeConfig(node));
 

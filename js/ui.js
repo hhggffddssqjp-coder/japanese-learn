@@ -106,7 +106,7 @@
   const stopConfetti = () => { cancelAnimationFrame(fxRaf); const cv = document.getElementById('fx'); if (cv) cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); };
 
   const speakBtn = (text, cls = '', slow = false) =>
-    `<button type="button" class="spk ${cls}" data-say="${JP.esc(text)}"${slow ? ' data-slow="1"' : ''} aria-label="${slow ? '慢速播放' : '播放發音'}">${slow ? '<span class="turtle">🐢</span>' : ICON.speaker()}</button>`;
+    `<button type="button" class="spk ${cls}" data-say="${JP.esc(text)}"${slow ? ' data-slow="1"' : ''} aria-label="${slow ? '慢速播放' : '播放發音'}">${slow ? '<span class="slow-t">慢</span>' : ICON.speaker()}</button>`;
 
   JP.ui = { ICON, toast, modal, closeTop, confetti, stopConfetti, speakBtn };
 })();

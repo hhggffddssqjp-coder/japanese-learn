@@ -55,6 +55,9 @@
   /* ───── 題目畫面 ───── */
   function promptHtml(q) {
     const p = q.prompt || {};
+    if (q.type === 'order' && p.listen) {
+      return `<div class="q-listen">${speakBtn(p.say, 'big')}${speakBtn(p.say, 'slow', true)}</div>`;
+    }
     if (q.type === 'order') {
       return `<div class="bubble-row"><span class="mascot" aria-hidden="true">🐱</span><div class="bubble">${esc(p.zh)}${p.say ? speakBtn(p.say, 'inline') : ''}</div></div>`;
     }

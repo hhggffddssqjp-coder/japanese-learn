@@ -91,7 +91,7 @@
       `<h2 class="g-title">一個假名＝一個固定發音</h2><p>就像注音符號，看到就唸，不會像英文一樣變來變去。</p>
         <div class="info-vowels" lang="ja"><div><b>あ</b><small>ㄚ</small></div><div><b>い</b><small>ㄧ</small></div><div><b>う</b><small>ㄨ</small></div><div><b>え</b><small>ㄝ</small></div><div><b>お</b><small>ㄛ</small></div></div>
         <p class="small muted">注音只是近似：日語的「う」嘴唇放鬆、不用嘟圓。實際發音請多按 🔊 聽幾遍。</p>`,
-      `<h2 class="g-title">這樣學最有效</h2><ul class="info-list"><li>🖼️ <b>每個假名都配一張圖</b>，把「形狀＋聲音＋圖片」連在一起記。</li><li>🔊 <b>多聽、跟著唸</b>：每個字都能聽到發音，也有慢速 🐢。</li><li>🧩 <b>每關只學 2～5 個字</b>，不用急，答錯的題目會再出現。</li><li>🔁 <b>每天 5～10 分鐘</b>，保持連勝，比一次學很久有效。</li></ul>`,
+      `<h2 class="g-title">這樣學最有效</h2><ul class="info-list"><li>🖼️ <b>每個假名都配一張圖</b>，把「形狀＋聲音＋圖片」連在一起記。</li><li>🔊 <b>多聽、跟著唸</b>：每個字都能聽到發音，也有慢速播放（「慢」按鈕）。</li><li>🧩 <b>每關只學 2～5 個字</b>，不用急，答錯的題目會再出現。</li><li>🔁 <b>每天 5～10 分鐘</b>，保持連勝，比一次學很久有效。</li></ul>`,
     ],
   });
   add({ id: 'intro:v1', world: 'intro', type: 'kana', easy: true, title: 'あ・い・う', sub: '第一組母音 a i u', icon: 'あ', items: ['h:あ', 'h:い', 'h:う'] });

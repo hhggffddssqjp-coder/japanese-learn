@@ -163,19 +163,103 @@
     return mk(it, 'pic2kana', 1, { title: '補上缺少的假名', prompt: { em: it.em, html, zh: it.wordZh }, layout: 'grid', choices: opts(it, ds, (o) => `<span class="kc">${esc(o.jp)}</span>`) });
   };
 
+  /* ───── 更多題型（讓每次練習都不太一樣） ───── */
+  // 中文 → 選圖
+  B.zh2pic = (it) => {
+    const ds = wordDistractors(it, 3, (c) => c.em); if (ds.length < 3) return null;
+    return mk(it, 'zh2pic', 0, { title: '「' + it.zh + '」是哪一張圖？', prompt: { zh: it.zh }, layout: 'pics', choices: opts(it, ds, (o) => `<span class="pic">${o.em}</span>`) });
+  };
+  // 看圖 → 選中文
+  B.pic2zh = (it) => {
+    const ds = wordDistractors(it, 3, (c) => c.zh); if (ds.length < 3) return null;
+    return mk(it, 'pic2zh', 0, { title: '這張圖是什麼意思？', prompt: { em: it.em }, choices: opts(it, ds, (o) => esc(o.zh)) });
+  };
+  // 聽音 → 選中文
+  B.listen2zh = (it) => {
+    if (!canListen() || it.kind !== 'word') return null;
+    const ds = wordDistractors(it, 3, (c) => c.zh); if (ds.length < 3) return null;
+    return mk(it, 'listen2zh', 1, { title: '聽聽看，這是什麼意思？', listening: true, prompt: { say: sayOf(it), listen: true, auto: true }, choices: opts(it, ds, (o) => esc(o.zh)) });
+  };
+  // 日文 → 選羅馬拼音
+  B.jp2ro = (it) => {
+    if (it.kind !== 'word') return null;
+    const ds = wordDistractors(it, 3, (c) => c.ro); if (ds.length < 3) return null;
+    return mk(it, 'jp2ro', 1, { title: '這個字怎麼唸？', prompt: { jp: jpHtml(it), say: sayOf(it) }, choices: opts(it, ds, (o) => esc(o.ro)) });
+  };
+  // 羅馬拼音 → 選日文
+  B.ro2jp = (it) => {
+    if (it.kind !== 'word') return null;
+    const ds = wordDistractors(it, 3, (c) => c.jp); if (ds.length < 3) return null;
+    return mk(it, 'ro2jp', 1, { title: '哪一個是「' + it.ro + '」？', prompt: { ro: it.ro }, choices: opts(it, ds, jpHtml) });
+  };
+  // 聽音 → 選羅馬拼音（單字與假名都適用）
+  B.listen2ro = (it) => {
+    if (!canListen()) return null;
+    const ds = it.kind === 'word' ? wordDistractors(it, 3, (c) => c.ro) : kanaDistractors(it, 3, (c) => c.ro);
+    if (ds.length < 3) return null;
+    return mk(it, 'listen2ro', 1, { title: '聽聽看，這個音是？', listening: true, prompt: { say: sayOf(it), listen: true, auto: true }, layout: it.kind === 'kana' ? 'grid' : 'list', choices: opts(it, ds, (o) => esc(o.ro)) });
+  };
+  // 例句 → 選中文翻譯
+  B.sent2zh = (it) => {
+    if (it.kind !== 'word' || !it.ex) return null;
+    const near = wordsAll.filter((c) => c.ex && c.id !== it.id && c.exZh !== it.exZh && lessonWorld[c.lesson] === lessonWorld[it.lesson]);
+    const ds = pickDistinct(shuffle(near).concat(shuffle(wordsAll.filter((c) => c.ex && c.id !== it.id && c.exZh !== it.exZh))), 3, (c) => c.exZh, [it.exZh]);
+    if (ds.length < 3) return null;
+    return mk(it, 'sent2zh', 1, { title: '這句話是什麼意思？', prompt: { html: ruby(it.ex), say: plain(it.ex), sentence: true }, choices: shuffle([it].concat(ds)).map((o) => ({ html: esc(o.exZh), correct: o.id === it.id, key: o.id })), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
+  };
+  // 中文 → 選日文例句
+  B.zh2sent = (it) => {
+    if (it.kind !== 'word' || !it.ex) return null;
+    const near = wordsAll.filter((c) => c.ex && c.id !== it.id && plain(c.ex) !== plain(it.ex) && lessonWorld[c.lesson] === lessonWorld[it.lesson]);
+    const ds = pickDistinct(shuffle(near), 3, (c) => plain(c.ex), [plain(it.ex)]);
+    if (ds.length < 3) return null;
+    return mk(it, 'zh2sent', 2, { title: '哪一句日文的意思是這個？', prompt: { zh: it.exZh }, layout: 'list', choices: shuffle([it].concat(ds)).map((o) => ({ html: ruby(o.ex), correct: o.id === it.id, key: o.id })), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
+  };
+  // 聽句子 → 排列
+  B.listenOrder = (it) => {
+    if (!canListen() || it.kind !== 'word' || !it.ex || it.noOrder) return null;
+    const q = orderQ(it.ex, it.exZh, it, 2);
+    if (!q) return null;
+    q.sub = 'listenOrder'; q.listening = true; q.title = '聽句子，排出正確的順序';
+    q.prompt = { say: plain(it.ex), listen: true, auto: true, zh: it.exZh };
+    return q;
+  };
+  // 假名 → 選出含有這個假名的字
+  B.kana2word = (it) => {
+    if (it.kind !== 'kana' || !it.word || it.rare) return null;
+    const pool = kanaAll.filter((c) => c.script === it.script && c.word && !c.rare && c.id !== it.id && !c.word.includes(it.jp));
+    const ds = pickDistinct(shuffle(pool), 3, (c) => c.word, [it.word]);
+    if (ds.length < 3) return null;
+    return mk(it, 'kana2word', 1, { title: '哪一個字裡面有「' + it.jp + '」？', prompt: { jp: esc(it.jp), say: it.jp }, choices: shuffle([it].concat(ds)).map((o) => ({ html: esc(o.word), correct: o.id === it.id, key: o.id })) });
+  };
+
   const TIERS = {
-    word: { easy: ['pic2jp', 'jp2pic', 'listen2pic'], mid: ['jp2zh', 'zh2jp', 'listen2jp', 'fill', 'pic2jp'], hard: ['listen2jp', 'zh2jp', 'order', 'fill', 'type', 'jp2zh'] },
-    kana: { easy: ['kana2pic', 'kana2ro', 'listen2kana'], mid: ['ro2kana', 'pic2kana', 'listen2kana', 'kana2ro'], hard: ['type', 'listen2kana', 'ro2kana', 'pic2kana'] },
-    yoon: { easy: ['kana2ro', 'listen2kana'], mid: ['ro2kana', 'listen2kana', 'kana2ro'], hard: ['type', 'listen2kana', 'ro2kana'] },
+    word: {
+      easy: ['pic2jp', 'jp2pic', 'zh2pic', 'pic2zh', 'listen2pic'],
+      mid: ['jp2zh', 'zh2jp', 'listen2jp', 'listen2zh', 'fill', 'jp2ro', 'ro2jp', 'sent2zh'],
+      hard: ['listen2jp', 'listen2zh', 'zh2jp', 'order', 'listenOrder', 'fill', 'type', 'zh2sent', 'sent2zh', 'listen2ro'],
+    },
+    kana: {
+      easy: ['kana2pic', 'kana2ro', 'listen2kana'],
+      mid: ['ro2kana', 'pic2kana', 'listen2kana', 'kana2ro', 'kana2word', 'listen2ro'],
+      hard: ['type', 'listen2kana', 'ro2kana', 'pic2kana', 'kana2word', 'listen2ro'],
+    },
+    yoon: { easy: ['kana2ro', 'listen2kana'], mid: ['ro2kana', 'listen2kana', 'kana2ro', 'listen2ro'], hard: ['type', 'listen2kana', 'ro2kana', 'listen2ro'] },
   };
   const kindKey = (it) => (it.kind === 'word' ? 'word' : it.yoon ? 'yoon' : 'kana');
 
   function build(it, sub) { const f = B[sub]; return f ? f(it) : null; }
+  // 記住每個項目最近用過的題型，下次盡量換不同的（同一關重玩也會有變化）
+  const recent = {};
+  const recentOf = (id) => recent[id] || [];
   function makeQ(it, tier, avoid = []) {
     const ks = kindKey(it);
     const ok = (s) => canListen() || !/^listen/.test(s);
     const tryList = (list, av) => { for (const s of shuffle(list).filter((x) => ok(x) && !av.includes(x))) { const q = build(it, s); if (q) return q; } return null; };
-    return tryList(TIERS[ks][tier], avoid) || tryList(TIERS[ks][tier], []) || tryList(TIERS[ks].easy, []) || tryList(TIERS[ks].mid, []) || tryList(TIERS[ks].hard, []);
+    const rec = recentOf(it.id);
+    const q = tryList(TIERS[ks][tier], avoid.concat(rec)) || tryList(TIERS[ks][tier], avoid) || tryList(TIERS[ks][tier], []) || tryList(TIERS[ks].easy, []) || tryList(TIERS[ks].mid, []) || tryList(TIERS[ks].hard, []);
+    if (q && q.sub) { recent[it.id] = rec.concat(q.sub).slice(-5); }
+    return q;
   }
 
   /* 配對題 */
@@ -240,10 +324,15 @@
     return qs;
   }
 
+  // level：0 第一次、1 重玩過、2 已拿三星（題目更難）；extra：混入前面學過的項目複習
   function planLesson(ids, opts = {}) {
     const its = ids.map(JP.item).filter(Boolean);
     const n = its.length;
-    const count = opts.easy ? clamp(n * 2 + 2, 6, 12) : clamp(n * 2 + 2, 10, 16);
+    const level = opts.level || 0;
+    const extras = (opts.extra || []).map(JP.item).filter(Boolean);
+    const tiers = opts.easy ? [['easy'], ['easy', 'mid'], ['mid']][Math.min(level, 2)] : [['easy'], ['mid'], ['mid', 'hard']][Math.min(level, 2)];
+    const base = opts.easy ? clamp(n * 2 + 2, 6, 12) : clamp(n * 2 + 2, 10, 16);
+    const count = base + (level > 0 ? Math.min(3, extras.length) : 0);
     const qs = [];
     const used = {};
     const push = (it, tier) => {
@@ -251,13 +340,15 @@
       if (q) { qs.push(q); (used[it.id] = used[it.id] || []).push(q.sub); }
     };
     const withMatch = n >= 4;
-    its.forEach((it) => push(it, 'easy'));
-    shuffle(its).forEach((it, i) => { if (qs.length < count - (withMatch ? 1 : 0)) push(it, opts.easy || i % 2 === 0 ? 'easy' : 'mid'); });
+    its.forEach((it) => push(it, tiers[0]));
+    shuffle(its).forEach((it, i) => { if (qs.length < base - (withMatch ? 1 : 0)) push(it, tiers[(i + 1) % tiers.length]); });
     let guard = 0;
-    while (qs.length < count - (withMatch ? 1 : 0) && guard++ < 30) push(pick(its), opts.easy ? 'easy' : pick(['mid', 'mid', 'hard']));
+    while (qs.length < base - (withMatch ? 1 : 0) && guard++ < 30) push(pick(its), pick(tiers));
+    if (level > 0) sample(extras, Math.min(3, extras.length)).forEach((it) => push(it, 'mid'));
     qs.sort((a, b) => a.d - b.d + (Math.random() - 0.5) * 1.4);
     spread(qs);
     if (withMatch) qs.splice(Math.floor(qs.length / 2), 0, matchQ(sample(its, Math.min(5, n))));
+    void count;
     return qs;
   }
 
