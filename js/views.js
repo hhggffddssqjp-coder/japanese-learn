@@ -140,7 +140,7 @@
   function nodeConfig(node) {
     if (node.type === 'boss') return { kind: 'boss', title: node.title, node, hearts: 3, questions: Q.planBoss(node) };
     if (node.type === 'info') return { kind: 'grammar', title: node.title, node, teachPages: node.pages, questions: Q.infoQuiz() };
-    if (node.type === 'grammar') { const g = JP.gmap.get(node.gid); return { kind: 'grammar', title: node.title, node, teachGrammar: g, questions: Q.grammarQs(g, 8) }; }
+    if (node.type === 'grammar') { const g = JP.gmap.get(node.gid); return { kind: 'grammar', title: node.title, node, teachGrammar: g, questions: Q.grammarQs(g, 10, ((S.nodes[node.id] || {}).plays || 0) >= 1 ? 1 : 0) }; }
     const pr = S.nodes[node.id] || {};
     const level = pr.stars >= 3 ? 2 : (pr.plays || 0) >= 1 ? 1 : 0;
     const extra = shuffle(JP.NODES.filter((n) => n.idx < node.idx && n.items.length).flatMap((n) => n.items).filter((id) => S.cards[id] && !node.items.includes(id))).slice(0, 6);
