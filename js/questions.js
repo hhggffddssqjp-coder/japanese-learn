@@ -9,7 +9,7 @@
   const kanaAll = JP.itemList('kana');
   const lessonWorld = {};
   JP.WORLDS.forEach((w) => w.nodes.forEach((n) => { if (n.lesson) lessonWorld[n.lesson] = w.id; }));
-  const canListen = () => JP.tts.ok && JP.tts.hasJa;
+  const canListen = () => JP.tts.can();
 
   /* ───── 顯示輔助 ───── */
   function jpHtml(it) {

@@ -1,0 +1,71 @@
+name: 產生語音檔
+
+# 手動執行：用 Google Cloud Text-to-Speech 把所有單字／例句錄成 mp3，放進 audio/ 並提交。
+# 建議先用「只計算字數」跑一次，確認字數與費用估計沒問題，再正式產生。
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只計算字數、不呼叫 Google（建議先跑一次）'
+        type: boolean
+        default: true
+      voice:
+        description: '語音名稱（可用 LIST 模式查詢，預設 Neural2-B 女聲）'
+        type: string
+        default: 'ja-JP-Neural2-B'
+      list_voices:
+        description: '只列出可用的日語語音（不產生音檔）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 列出可用語音
+        if: ${{ inputs.list_voices }}
+        run: node tools/gen-audio.mjs
+        env:
+          LIST_VOICES: '1'
+          GOOGLE_TTS_KEY: ${{ secrets.GOOGLE_TTS_KEY }}
+
+      - name: 產生音檔
+        if: ${{ !inputs.list_voices }}
+        run: node tools/gen-audio.mjs
+        env:
+          GOOGLE_TTS_KEY: ${{ secrets.GOOGLE_TTS_KEY }}
+          VOICE: ${{ inputs.voice }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          MAX_CHARS: '60000'
+
+      - name: 提交音檔
+        if: ${{ !inputs.list_voices && !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audio
+          if git diff --cached --quiet; then
+            echo "沒有新的音檔需要提交"
+          else
+            git commit -m "Add pre-recorded Japanese audio"
+            git push
+          fi
+
+      - name: 觸發 GitHub Pages 重新部署
+        if: ${{ !inputs.list_voices && !inputs.dry_run }}
+        continue-on-error: true
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages/builds"

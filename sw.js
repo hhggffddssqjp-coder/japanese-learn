@@ -1,5 +1,5 @@
 /* 離線快取：優先連線，失敗時使用快取（含字型） */
-const CACHE = 'nihongo-v3';
+const CACHE = 'nihongo-v4';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icon.svg',
   'js/data-kana.js', 'js/data-words.js', 'js/data-grammar.js', 'js/core.js', 'js/curriculum.js', 'js/achievements.js',
@@ -18,10 +18,11 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).pathname.includes('/audio/')) return; // 音檔交給瀏覽器處理（含 Range 請求）
   e.respondWith(
     fetch(e.request)
       .then((res) => {
-        if (res && (res.ok || res.type === 'opaque')) {
+        if (res && (res.status === 200 || res.type === 'opaque')) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(e.request, copy));
         }
