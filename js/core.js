@@ -64,6 +64,31 @@
     }
     return out;
   }
+  // 句子羅馬拼音：以「|」分詞，助詞 は／を／へ 依實際發音（wa／o／e）
+  const RO_WORD = { こんにちは: 'konnichiwa', こんばんは: 'konbanwa' };
+  const RO_PART = { は: 'wa', を: 'o', へ: 'e', では: 'dewa', には: 'niwa', とは: 'towa', へは: 'ewa' };
+  function tokRo(t) {
+    const r = reading(t);
+    if (RO_PART[r]) return RO_PART[r];
+    if (RO_WORD[r]) return RO_WORD[r];
+    let m;
+    if ((m = r.match(/^(.*)(です|ます)か$/)) && r.length > 2) return (toRomaji(m[1]) + (m[2] === 'です' ? 'desu' : 'masu')).replace(/^$/, '') + ' ka';
+    if ((m = r.match(/^(.+)さん$/))) return toRomaji(m[1]) + '-san';
+    return toRomaji(r);
+  }
+  function sentRo(str) {
+    const out = [];
+    String(str).split('|').forEach((t) => {
+      if (!t) return;
+      if (/^[。．]+$/.test(t)) { if (out.length) out[out.length - 1] += '.'; return; }
+      if (/^[、，]+$/.test(t)) { if (out.length) out[out.length - 1] += ','; return; }
+      if (/^[？?]+$/.test(t)) { if (out.length) out[out.length - 1] += '?'; return; }
+      if (/^[！!]+$/.test(t)) { if (out.length) out[out.length - 1] += '!'; return; }
+      out.push(tokRo(t));
+    });
+    const s = out.join(' ');
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
   // 輸入比對：忽略大小寫、空白、長音差異與訓令式寫法
   function normRo(s) {
     s = String(s).toLowerCase().replace(/[\s'’\-·・]/g, '');
@@ -83,7 +108,7 @@
     cards: {},
     stats: { answered: 0, correct: 0, listening: 0, bestCombo: 0, lessons: 0, perfects: 0, blitz: 0, reviews: 0, bossWins: 0 },
     ach: {}, stamps: {},
-    set: { sound: true, haptic: true, voice: '', slow: false, auto: true, romaji: true, furi: true, theme: 'auto' },
+    set: { sound: true, haptic: true, voice: '', slow: false, auto: true, romaji: true, romajiQ: true, furi: true, theme: 'auto' },
   });
   function loadState() {
     const d = defaults();
@@ -317,7 +342,7 @@
 
   Object.assign(JP, {
     esc, shuffle, sample, pick, clamp, dayKey, addDays, daysBetween, parseDay,
-    ruby, plain, reading, tokensOf, toRomaji, normRo, toHira,
+    ruby, plain, reading, tokensOf, toRomaji, normRo, toHira, tokRo, sentRo,
     save, saveSoon, defaults, levelInfo, xpAt, needFor, rankOf, RANKS,
     dailyXP, streakAlive, streakDisplay, doneToday, addXP,
     review, seed, card, dueIds, weakIds, learnedIds, INTERVALS, MAX_BOX,
