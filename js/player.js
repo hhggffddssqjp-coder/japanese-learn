@@ -35,7 +35,7 @@
       ${S.set.romaji ? `<div class="tc-ro">${esc(it.ro)}</div>` : ''}
       <div class="tc-zh">${esc(it.zh)}</div>
       <div class="tc-say">${speakBtn(it.rd, 'big')}${speakBtn(it.rd, 'slow', true)}</div>
-      ${it.ex ? `<div class="tc-ex"><div class="ex-jp" lang="ja">${ruby(it.ex)}${speakBtn(plain(it.ex), 'inline')}</div>${S.set.romaji ? `<div class="ex-ro">${esc(JP.sentRo(it.ex))}</div>` : ''}<div class="ex-zh">${esc(it.exZh)}</div></div>` : ''}
+      ${(it.exs || []).map(([ex, exZh]) => `<div class="tc-ex"><div class="ex-jp" lang="ja">${ruby(ex)}${speakBtn(plain(ex), 'inline')}</div>${S.set.romaji ? `<div class="ex-ro">${esc(JP.sentRo(ex))}</div>` : ''}<div class="ex-zh">${esc(exZh)}</div></div>`).join('')}
       ${it.tip ? `<div class="tc-tip"><span>💡</span>${esc(it.tip)}</div>` : ''}
     </article>`;
   }

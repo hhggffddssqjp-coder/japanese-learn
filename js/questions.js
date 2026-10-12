@@ -99,9 +99,19 @@
     const ds = wordDistractors(it, 3, (c) => c.jp); if (ds.length < 3) return null;
     return mk(it, 'listen2jp', 1, { title: '聽聽看，選出你聽到的字', listening: true, prompt: { say: sayOf(it), listen: true, auto: true }, choices: opts(it, ds, jpR) });
   };
+  // 單字有多個例句時，每次出題隨機挑一句（盡量避開上次用過的）
+  const lastEx = {};
+  const withEx = (it) => {
+    if (it.kind !== 'word' || !it.exs || it.exs.length < 2) return it;
+    const opts2 = it.exs.filter((e) => e[0] !== lastEx[it.id]);
+    const e = opts2[Math.floor(Math.random() * opts2.length)];
+    lastEx[it.id] = e[0];
+    return Object.assign({}, it, { ex: e[0], exZh: e[1] });
+  };
   // 例句填空
-  B.fill = (it) => {
-    if (it.kind !== 'word' || !it.ex) return null;
+  B.fill = (it0) => {
+    if (it0.kind !== 'word' || !it0.ex) return null;
+    const it = withEx(it0);
     const toks = it.ex.split('|');
     const ti = toks.findIndex((t) => { const p = plain(t); return p === it.jp || (p.startsWith(it.jp) && p.length - it.jp.length <= 2 && it.jp.length >= 1 && !/^[ぁ-ん]$/.test(it.jp)); });
     if (ti < 0) return null;
@@ -128,7 +138,7 @@
       tiles, answer: toks.map(plain), reveal: { html: `<div class="rv-sent">${ruby(sentence)}${sentR(sentence)}</div><div class="rv-zh">${esc(zh)}</div>`, itemId: it ? it.id : null },
     };
   }
-  B.order = (it) => (it.kind === 'word' && it.ex && !it.noOrder ? orderQ(it.ex, it.exZh, it, 2) : null);
+  B.order = (it0) => { if (it0.kind !== 'word' || !it0.ex || it0.noOrder) return null; const it = withEx(it0); return orderQ(it.ex, it.exZh, it, 2); };
   // 輸入羅馬拼音
   B.type = (it) => {
     if (it.kind === 'kana') {
@@ -205,24 +215,27 @@
     return mk(it, 'listen2ro', 1, { title: '聽聽看，這個音是？', listening: true, prompt: { say: sayOf(it), listen: true, auto: true }, layout: it.kind === 'kana' ? 'grid' : 'list', choices: opts(it, ds, (o) => esc(o.ro)) });
   };
   // 例句 → 選中文翻譯
-  B.sent2zh = (it) => {
-    if (it.kind !== 'word' || !it.ex) return null;
+  B.sent2zh = (it0) => {
+    if (it0.kind !== 'word' || !it0.ex) return null;
+    const it = withEx(it0);
     const near = wordsAll.filter((c) => c.ex && c.id !== it.id && c.exZh !== it.exZh && lessonWorld[c.lesson] === lessonWorld[it.lesson]);
     const ds = pickDistinct(shuffle(near).concat(shuffle(wordsAll.filter((c) => c.ex && c.id !== it.id && c.exZh !== it.exZh))), 3, (c) => c.exZh, [it.exZh]);
     if (ds.length < 3) return null;
     return mk(it, 'sent2zh', 1, { title: '這句話是什麼意思？', prompt: { html: ruby(it.ex) + sentR(it.ex), say: plain(it.ex), sentence: true }, choices: shuffle([it].concat(ds)).map((o) => ({ html: esc(o.exZh), correct: o.id === it.id, key: o.id })), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}${sentR(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
   };
   // 中文 → 選日文例句
-  B.zh2sent = (it) => {
-    if (it.kind !== 'word' || !it.ex) return null;
+  B.zh2sent = (it0) => {
+    if (it0.kind !== 'word' || !it0.ex) return null;
+    const it = withEx(it0);
     const near = wordsAll.filter((c) => c.ex && c.id !== it.id && plain(c.ex) !== plain(it.ex) && lessonWorld[c.lesson] === lessonWorld[it.lesson]);
     const ds = pickDistinct(shuffle(near), 3, (c) => plain(c.ex), [plain(it.ex)]);
     if (ds.length < 3) return null;
     return mk(it, 'zh2sent', 2, { title: '哪一句日文的意思是這個？', prompt: { zh: it.exZh }, layout: 'list', choices: shuffle([it].concat(ds)).map((o) => ({ html: ruby(o.ex) + sentR(o.ex), correct: o.id === it.id, key: o.id })), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}${sentR(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
   };
   // 聽句子 → 排列
-  B.listenOrder = (it) => {
-    if (!canListen() || it.kind !== 'word' || !it.ex || it.noOrder) return null;
+  B.listenOrder = (it0) => {
+    if (!canListen() || it0.kind !== 'word' || !it0.ex || it0.noOrder) return null;
+    const it = withEx(it0);
     const q = orderQ(it.ex, it.exZh, it, 2);
     if (!q) return null;
     q.sub = 'listenOrder'; q.listening = true; q.title = '聽句子，排出正確的順序';
@@ -420,7 +433,7 @@
     const grab = (filter, n, tier) => sample(JP.itemList().filter(filter), n * 3).map((it) => makeQ(it, tier)).filter(Boolean).slice(0, n);
     const hira = grab((i) => i.id[0] === 'h' && !i.yoon && !i.rare && i.id !== 'h:を', 3, 'mid');
     const kata = grab((i) => i.id[0] === 'k' && !i.yoon && !i.rare, 3, 'mid');
-    const n5 = sample(wordsAll.filter((w) => ['n5a', 'n5b'].includes(lessonWorld[w.lesson])), 20).map((it) => makeQ(it, Math.random() < 0.5 ? 'mid' : 'hard')).filter((q) => q && q.type !== 'type').slice(0, 3);
+    const n5 = sample(wordsAll.filter((w) => ['n5a', 'n5b', 'n5c'].includes(lessonWorld[w.lesson])), 20).map((it) => makeQ(it, Math.random() < 0.5 ? 'mid' : 'hard')).filter((q) => q && q.type !== 'type').slice(0, 3);
     const n4 = sample(wordsAll.filter((w) => lessonWorld[w.lesson] === 'n4'), 20).map((it) => makeQ(it, 'mid')).filter((q) => q && q.type !== 'type').slice(0, 3);
     [hira, kata, n5, n4].forEach((arr, t) => arr.forEach((q) => { q.tierIdx = t; }));
     return hira.concat(kata, n5, n4);

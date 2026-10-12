@@ -29,11 +29,11 @@
 
   const RO_FIX = { こんにちは: 'konnichiwa', こんばんは: 'konbanwa' }; // は 作助詞時讀 wa
   JP.LESSONS.forEach((l) => {
-    l.words.forEach(([jp, rd, zh, em, ex, exZh, tip]) => {
+    l.words.forEach(([jp, rd, zh, em, ex, exZh, tip, ex2, ex2Zh]) => {
       const id = `w:${jp}`;
       ITEMS.set(id, {
         id, kind: 'word', jp, rd: rd || jp, hasKanji: !!rd && rd !== jp, ro: RO_FIX[jp] || JP.toRomaji(rd || jp), zh, em,
-        ex, exZh, tip, lesson: l.id, noOrder: !!l.noOrder,
+        ex, exZh, tip, exs: [[ex, exZh], [ex2, ex2Zh]].filter((e) => e[0]), lesson: l.id, noOrder: !!l.noOrder,
       });
     });
   });
@@ -46,6 +46,7 @@
     { id: 'dakuon', title: '濁音・拗音', zh: '濁音與拗音', sub: '加上點點圈圈，聲音變豐富', em: '🎏', theme: 'matcha', level: '入門' },
     { id: 'n5a', title: 'はじめの一歩', zh: 'N5・基礎單字', sub: '問候、數字、食物、動物、顏色', em: '⛩️', theme: 'vermilion', level: 'N5' },
     { id: 'n5b', title: '毎日の生活', zh: 'N5・日常生活', sub: '動詞、形容詞與基本句型', em: '🏯', theme: 'indigo', level: 'N5' },
+    { id: 'n5c', title: 'もっと日本語', zh: 'N5・擴充單字', sub: '星期、季節、職業、蔬果、動作與形容詞', em: '🎋', theme: 'teal', level: 'N5' },
     { id: 'n4', title: 'ひろがる世界', zh: 'N4・進階表達', sub: '家人、旅行、心情與更多句型', em: '🗻', theme: 'gold', level: 'N4' },
   ];
 
@@ -135,6 +136,8 @@
   bossOf('n5a', 'N5 基礎・鬼關');
   seq('n5b', ['things', 'house', 'verb1', 'g:wo', 'verb2', 'g:masu', 'verb3', 'g:ni-de', 'adj1', 'adj2', 'g:adj', 'adjna', 'g:aru-iru', 'ques', 'g:tai', 'g:te']);
   bossOf('n5b', 'N5 日常・鬼關');
+  seq('n5c', ['week', 'season', 'timeword', 'family2', 'people2', 'job', 'food2', 'snack', 'drink2', 'veg', 'fruit2', 'animal2', 'animal3', 'weather', 'nature2', 'place2', 'shop', 'position1', 'position2', 'verb6', 'verb7', 'verb8', 'verb9', 'adj4', 'adj5', 'adj6', 'misc1', 'misc2']);
+  bossOf('n5c', 'N5 擴充・鬼關');
   seq('n4', ['family', 'clothes', 'school', 'shopping', 'town', 'restaurant', 'health', 'g:nai', 'verb4', 'verb5', 'g:ta-koto', 'feeling', 'g:dekiru', 'travel', 'g:kara', 'adj3', 'g:naru', 'g:hou']);
   bossOf('n4', 'N4 魔王・鬼關');
 
@@ -191,11 +194,11 @@
   const currentNode = () => NODES[Math.min(S.unlocked, NODES.length - 1)];
 
   // 課程版本升級（新增關卡會改變索引）：依已完成的關卡重新計算解鎖進度
-  if (S.cv !== 3) {
+  if (S.cv !== 4) {
     let m = -1;
     NODES.forEach((n) => { const q = S.nodes[n.id]; if (q && (q.stars > 0 || q.skipped)) m = Math.max(m, n.idx); });
     S.unlocked = Math.max(0, Math.min(NODES.length - 1, m + 1));
-    S.cv = 3; JP.save();
+    S.cv = 4; JP.save();
   }
 
   Object.assign(JP, { WORLDS, NODES, nodeById, worldNodes, stateOf, completeNode, skipWorld, startAtWorld, worldOf, worldStars, worldCleared, currentNode, gmap, lessonMap });

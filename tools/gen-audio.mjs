@@ -37,7 +37,7 @@ function loadData() {
   const sandbox = { window: {}, console };
   sandbox.window.window = sandbox.window;
   vm.createContext(sandbox);
-  for (const f of ['data-kana', 'data-words', 'data-grammar']) {
+  for (const f of ['data-kana', 'data-words', 'data-words-extra', 'data-grammar']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f + '.js'), 'utf8'), sandbox, { filename: f });
   }
   return sandbox.window.JP;
@@ -50,7 +50,7 @@ function collectTexts() {
   const K = JP.KANA;
   [K.hiraBasic, K.hiraDakuten, K.kataBasic, K.kataDakuten].forEach((list) => list.forEach(([ch, , word]) => { set.add(ch); set.add(word); }));
   K.yoonRows.forEach(([ch]) => { set.add(ch); set.add(K.toKata(ch)); });
-  JP.LESSONS.forEach((l) => l.words.forEach(([jp, rd, , , ex]) => { set.add(rd || jp); if (ex) set.add(plain(ex)); }));
+  JP.LESSONS.forEach((l) => l.words.forEach(([jp, rd, , , ex, , , ex2]) => { set.add(rd || jp); if (ex) set.add(plain(ex)); if (ex2) set.add(plain(ex2)); }));
   JP.GRAMMAR.forEach((g) => {
     g.examples.forEach(([s]) => set.add(plain(s)));
     g.quiz.forEach(([stem, ans]) => set.add(stem.replace(/（.*?）\s*$/, '').replace(/＿+/g, ans)));

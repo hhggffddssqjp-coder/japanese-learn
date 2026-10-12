@@ -21,7 +21,7 @@
     { id: 'boss', em: '👹', name: '鬼退治', desc: '打倒第一隻鬼關魔王', test: () => S.stats.bossWins >= 1 },
     { id: 'hira', em: '⛩️', name: '平假名完全制霸', desc: '通關「ひらがな」世界', test: () => cleared('hira') },
     { id: 'kata', em: '🎴', name: '片假名完全制霸', desc: '通關「カタカナ」世界', test: () => cleared('kata') },
-    { id: 'n5', em: '🏯', name: 'N5 修了', desc: '通關 N5 的兩個世界', test: () => cleared('n5a') && cleared('n5b') },
+    { id: 'n5', em: '🏯', name: 'N5 修了', desc: '通關 N5 的三個世界', test: () => cleared('n5a') && cleared('n5b') && cleared('n5c') },
     { id: 'n4', em: '🗾', name: '邁向 N4', desc: '通關 N4 世界', test: () => cleared('n4') },
     { id: 'listen50', em: '👂', name: '順風耳', desc: '答對 50 題聽力題', test: () => S.stats.listening >= 50 },
     { id: 'blitz15', em: '⏱️', name: '閃電手', desc: '閃電挑戰答對 15 題以上', test: () => S.stats.blitz >= 15 },
