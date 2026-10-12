@@ -281,40 +281,52 @@
   }
 
   /* ───── 文法題 ───── */
-  function grammarQs(g, n) {
-    const qs = [];
-    const all = JP.GRAMMAR;
-    g.quiz.forEach(([stem, ans, ...wrong]) => {
+  // 記住每課文法最近出過的填空題，下次優先出沒看過的
+  const recentG = {};
+  const sentOptions = (s, zh) => {
+    const others = pickDistinct(shuffle(JP.GRAMMAR.flatMap((x) => x.examples)), 3, (e) => e[1], [zh]);
+    return shuffle([[s, zh]].concat(others)).map((e) => ({ html: esc(e[1]), correct: e[1] === zh, key: e[1] }));
+  };
+  // level：0 第一次、1 以上重玩（更多填空與排列句子）
+  function grammarQs(g, n, level = 0) {
+    const all = g.quiz.map(([stem, ans, ...wrong]) => {
       const m = stem.match(/（(.*?)）\s*$/);
       const body = stem.replace(/（.*?）\s*$/, '');
       const html = esc(body).replace(/＿+/g, '<span class="blank wide"></span>');
       const choices = shuffle([ans].concat(shuffle(wrong).slice(0, 3))).map((c) => ({ html: esc(c), correct: c === ans, key: c }));
-      qs.push({
-        type: 'choice', sub: 'cloze', itemId: null, d: 1, layout: 'list2', title: '選出正確的說法', prompt: { html, zh: m ? m[1] : '', say: body.replace(/＿+/g, ans) },
+      return {
+        type: 'choice', sub: 'cloze', itemId: null, d: 1, layout: 'list2', title: '選出正確的說法', stem, prompt: { html, zh: m ? m[1] : '', say: body.replace(/＿+/g, ans) },
         choices, reveal: { html: `<div class="rv-sent">${esc(body.replace(/＿+/g, ans))}</div>${m ? `<div class="rv-zh">${esc(m[1])}</div>` : ''}` },
-      });
+      };
     });
+    const total = n || 10;
+    const nCloze = Math.min(all.length, level > 0 ? 6 : 5);
+    const seen = recentG[g.id] || (recentG[g.id] = new Set());
+    let fresh = shuffle(all.filter((q) => !seen.has(q.stem)));
+    if (fresh.length < nCloze) { seen.clear(); fresh = shuffle(all); }
+    const cloze = fresh.slice(0, nCloze);
+    cloze.forEach((q) => seen.add(q.stem));
+
     const exs = shuffle(g.examples);
-    exs.slice(0, 3).forEach(([s, zh]) => { const q = orderQ(s, zh, null, 1); if (q) qs.push(q); });
-    exs.slice(0, 2).forEach(([s, zh]) => {
-      const others = shuffle(all.flatMap((x) => x.examples).filter((e) => e[1] !== zh)).slice(0, 3);
-      qs.push({
-        type: 'choice', sub: 'sent2zh', itemId: null, d: 0, layout: 'list', title: '這句話是什麼意思？', prompt: { html: ruby(s) + sentR(s), say: plain(s), sentence: true },
-        choices: shuffle([[s, zh]].concat(others)).map((e) => ({ html: esc(e[1]), correct: e[1] === zh, key: e[1] })),
-        reveal: { html: `<div class="rv-sent">${ruby(s)}</div><div class="rv-zh">${esc(zh)}</div>` },
-      });
+    const qs = cloze.slice();
+    exs.slice(0, level > 0 ? 3 : 2).forEach(([s, zh]) => { const q = orderQ(s, zh, null, 1); if (q) qs.push(q); });
+    const [ts, tzh] = exs[exs.length - 1];
+    qs.push({
+      type: 'choice', sub: 'sent2zh', itemId: null, d: 0, layout: 'list', title: '這句話是什麼意思？', prompt: { html: ruby(exs[0][0]) + sentR(exs[0][0]), say: plain(exs[0][0]), sentence: true },
+      choices: sentOptions(exs[0][0], exs[0][1]),
+      reveal: { html: `<div class="rv-sent">${ruby(exs[0][0])}${sentR(exs[0][0])}</div><div class="rv-zh">${esc(exs[0][1])}</div>` },
     });
     if (canListen()) {
-      const [s, zh] = exs[exs.length - 1];
-      const others = shuffle(all.flatMap((x) => x.examples).filter((e) => e[1] !== zh)).slice(0, 3);
       qs.push({
-        type: 'choice', sub: 'listen2zh', itemId: null, d: 1, listening: true, layout: 'list', title: '聽聽看，這句話是什麼意思？', prompt: { say: plain(s), listen: true, auto: true },
-        choices: shuffle([[s, zh]].concat(others)).map((e) => ({ html: esc(e[1]), correct: e[1] === zh, key: e[1] })),
-        reveal: { html: `<div class="rv-sent">${ruby(s)}</div><div class="rv-zh">${esc(zh)}</div>` },
+        type: 'choice', sub: 'listen2zh', itemId: null, d: 1, listening: true, layout: 'list', title: '聽聽看，這句話是什麼意思？', prompt: { say: plain(ts), listen: true, auto: true },
+        choices: sentOptions(ts, tzh),
+        reveal: { html: `<div class="rv-sent">${ruby(ts)}${sentR(ts)}</div><div class="rv-zh">${esc(tzh)}</div>` },
       });
     }
+    // 不足時用剩餘的填空題補滿
+    shuffle(all.filter((q) => !cloze.includes(q))).forEach((q) => { if (qs.length < total) qs.push(q); });
     const sorted = qs.sort((a, b) => a.d - b.d + (Math.random() - 0.5) * 1.5);
-    return sorted.slice(0, n || sorted.length);
+    return sorted.slice(0, total);
   }
 
   /* ───── 出題規劃 ───── */
