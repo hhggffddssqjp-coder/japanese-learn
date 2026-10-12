@@ -16,6 +16,11 @@
     if (it.kind === 'word' && it.hasKanji && S.set.furi) return `<ruby>${esc(it.jp)}<rt>${esc(it.rd)}</rt></ruby>`;
     return esc(it.jp);
   }
+  // 羅馬拼音輔助（題目中可由設定開關）
+  const showRo = () => !!(S.set.romaji && S.set.romajiQ);
+  const roSmall = (t) => (showRo() && t ? `<small class="ro">${esc(t)}</small>` : '');
+  const jpR = (it) => `<span class="jpw">${jpHtml(it)}${roSmall(it.ro)}</span>`;
+  const sentR = (ex) => (showRo() ? `<small class="s-ro">${esc(JP.sentRo(ex))}</small>` : '');
   // 假名例字：把該假名標色
   function exampleHtml(it) {
     if (!it.word) return '';
@@ -65,12 +70,12 @@
   // 看圖選字
   B.pic2jp = (it) => {
     const ds = wordDistractors(it, 3, (c) => c.jp); if (ds.length < 3) return null;
-    return mk(it, 'pic2jp', 0, { title: '這張圖是什麼？選出日文', prompt: { em: it.em }, layout: 'list', choices: opts(it, ds, jpHtml) });
+    return mk(it, 'pic2jp', 0, { title: '這張圖是什麼？選出日文', prompt: { em: it.em }, layout: 'list', choices: opts(it, ds, jpR) });
   };
   // 看字選圖
   B.jp2pic = (it) => {
     const ds = wordDistractors(it, 3, (c) => c.em); if (ds.length < 3) return null;
-    return mk(it, 'jp2pic', 0, { title: '選出符合的圖', prompt: { jp: jpHtml(it), say: sayOf(it) }, layout: 'pics', choices: opts(it, ds, (o) => `<span class="pic">${o.em}</span>`) });
+    return mk(it, 'jp2pic', 0, { title: '選出符合的圖', prompt: { jp: jpR(it), say: sayOf(it) }, layout: 'pics', choices: opts(it, ds, (o) => `<span class="pic">${o.em}</span>`) });
   };
   // 聽音選圖
   B.listen2pic = (it) => {
@@ -81,18 +86,18 @@
   // 日 → 中
   B.jp2zh = (it) => {
     const ds = wordDistractors(it, 3, (c) => c.zh); if (ds.length < 3) return null;
-    return mk(it, 'jp2zh', 1, { title: '這個字是什麼意思？', prompt: { jp: jpHtml(it), say: sayOf(it) }, choices: opts(it, ds, (o) => esc(o.zh)) });
+    return mk(it, 'jp2zh', 1, { title: '這個字是什麼意思？', prompt: { jp: jpR(it), say: sayOf(it) }, choices: opts(it, ds, (o) => esc(o.zh)) });
   };
   // 中 → 日
   B.zh2jp = (it) => {
     const ds = wordDistractors(it, 3, (c) => c.jp); if (ds.length < 3) return null;
-    return mk(it, 'zh2jp', 1, { title: '「' + it.zh + '」的日文是？', prompt: { zh: it.zh, em: it.em }, choices: opts(it, ds, jpHtml) });
+    return mk(it, 'zh2jp', 1, { title: '「' + it.zh + '」的日文是？', prompt: { zh: it.zh, em: it.em }, choices: opts(it, ds, jpR) });
   };
   // 聽音選字
   B.listen2jp = (it) => {
     if (!canListen()) return null;
     const ds = wordDistractors(it, 3, (c) => c.jp); if (ds.length < 3) return null;
-    return mk(it, 'listen2jp', 1, { title: '聽聽看，選出你聽到的字', listening: true, prompt: { say: sayOf(it), listen: true, auto: true }, choices: opts(it, ds, jpHtml) });
+    return mk(it, 'listen2jp', 1, { title: '聽聽看，選出你聽到的字', listening: true, prompt: { say: sayOf(it), listen: true, auto: true }, choices: opts(it, ds, jpR) });
   };
   // 例句填空
   B.fill = (it) => {
@@ -101,12 +106,12 @@
     const ti = toks.findIndex((t) => { const p = plain(t); return p === it.jp || (p.startsWith(it.jp) && p.length - it.jp.length <= 2 && it.jp.length >= 1 && !/^[ぁ-ん]$/.test(it.jp)); });
     if (ti < 0) return null;
     const rest = plain(toks[ti]).slice(it.jp.length);
-    const html = toks.map((t, i) => (i === ti ? `<span class="blank"></span>${esc(rest)}` : ruby(t))).join('');
+    const html = toks.map((t, i) => (i === ti ? `<span class="blank"></span>${esc(rest)}` : ruby(t))).join('') + sentR(it.ex);
     const same = wordsAll.filter((c) => c.lesson === it.lesson && c.id !== it.id && c.jp !== it.jp);
     const pool = shuffle(same).concat(wordDistractors(it, 6, (c) => c.jp));
     const ds = pickDistinct(pool, 3, (c) => c.jp, [it.jp]);
     if (ds.length < 3) return null;
-    return mk(it, 'fill', 1, { title: '選出適合填入空格的字', prompt: { html, zh: it.exZh }, layout: 'list', choices: opts(it, ds, jpHtml), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
+    return mk(it, 'fill', 1, { title: '選出適合填入空格的字', prompt: { html, zh: it.exZh }, layout: 'list', choices: opts(it, ds, jpR), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}${sentR(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
   };
   // 排列句子
   function orderQ(sentence, zh, it, d) {
@@ -117,10 +122,10 @@
       const extra = shuffle(['は', 'が', 'を', 'に', 'で', 'へ', 'の', 'も', 'と']).find((p) => !toks.some((t) => plain(t) === p));
       if (extra) bankToks.push(extra);
     }
-    const tiles = shuffle(bankToks.map((t, i) => ({ t, i, html: ruby(t) })));
+    const tiles = shuffle(bankToks.map((t, i) => ({ t, i, html: ruby(t) + roSmall(JP.tokRo(t)) })));
     return {
       type: 'order', sub: 'order', itemId: it ? it.id : null, d, title: '把句子排列起來', prompt: { zh, say: plain(sentence), small: true },
-      tiles, answer: toks.map(plain), reveal: { html: `<div class="rv-sent">${ruby(sentence)}</div><div class="rv-zh">${esc(zh)}</div>`, itemId: it ? it.id : null },
+      tiles, answer: toks.map(plain), reveal: { html: `<div class="rv-sent">${ruby(sentence)}${sentR(sentence)}</div><div class="rv-zh">${esc(zh)}</div>`, itemId: it ? it.id : null },
     };
   }
   B.order = (it) => (it.kind === 'word' && it.ex && !it.noOrder ? orderQ(it.ex, it.exZh, it, 2) : null);
@@ -205,7 +210,7 @@
     const near = wordsAll.filter((c) => c.ex && c.id !== it.id && c.exZh !== it.exZh && lessonWorld[c.lesson] === lessonWorld[it.lesson]);
     const ds = pickDistinct(shuffle(near).concat(shuffle(wordsAll.filter((c) => c.ex && c.id !== it.id && c.exZh !== it.exZh))), 3, (c) => c.exZh, [it.exZh]);
     if (ds.length < 3) return null;
-    return mk(it, 'sent2zh', 1, { title: '這句話是什麼意思？', prompt: { html: ruby(it.ex), say: plain(it.ex), sentence: true }, choices: shuffle([it].concat(ds)).map((o) => ({ html: esc(o.exZh), correct: o.id === it.id, key: o.id })), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
+    return mk(it, 'sent2zh', 1, { title: '這句話是什麼意思？', prompt: { html: ruby(it.ex) + sentR(it.ex), say: plain(it.ex), sentence: true }, choices: shuffle([it].concat(ds)).map((o) => ({ html: esc(o.exZh), correct: o.id === it.id, key: o.id })), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}${sentR(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
   };
   // 中文 → 選日文例句
   B.zh2sent = (it) => {
@@ -213,7 +218,7 @@
     const near = wordsAll.filter((c) => c.ex && c.id !== it.id && plain(c.ex) !== plain(it.ex) && lessonWorld[c.lesson] === lessonWorld[it.lesson]);
     const ds = pickDistinct(shuffle(near), 3, (c) => plain(c.ex), [plain(it.ex)]);
     if (ds.length < 3) return null;
-    return mk(it, 'zh2sent', 2, { title: '哪一句日文的意思是這個？', prompt: { zh: it.exZh }, layout: 'list', choices: shuffle([it].concat(ds)).map((o) => ({ html: ruby(o.ex), correct: o.id === it.id, key: o.id })), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
+    return mk(it, 'zh2sent', 2, { title: '哪一句日文的意思是這個？', prompt: { zh: it.exZh }, layout: 'list', choices: shuffle([it].concat(ds)).map((o) => ({ html: ruby(o.ex) + sentR(o.ex), correct: o.id === it.id, key: o.id })), reveal: { html: `<div class="rv-sent">${ruby(it.ex)}${sentR(it.ex)}</div><div class="rv-zh">${esc(it.exZh)}</div>`, itemId: it.id } });
   };
   // 聽句子 → 排列
   B.listenOrder = (it) => {
@@ -294,7 +299,7 @@
     exs.slice(0, 2).forEach(([s, zh]) => {
       const others = shuffle(all.flatMap((x) => x.examples).filter((e) => e[1] !== zh)).slice(0, 3);
       qs.push({
-        type: 'choice', sub: 'sent2zh', itemId: null, d: 0, layout: 'list', title: '這句話是什麼意思？', prompt: { html: ruby(s), say: plain(s), sentence: true },
+        type: 'choice', sub: 'sent2zh', itemId: null, d: 0, layout: 'list', title: '這句話是什麼意思？', prompt: { html: ruby(s) + sentR(s), say: plain(s), sentence: true },
         choices: shuffle([[s, zh]].concat(others)).map((e) => ({ html: esc(e[1]), correct: e[1] === zh, key: e[1] })),
         reveal: { html: `<div class="rv-sent">${ruby(s)}</div><div class="rv-zh">${esc(zh)}</div>` },
       });
@@ -424,5 +429,5 @@
     ]);
   }
 
-  JP.Q = { infoQuiz, jpHtml, exampleHtml, sayOf, makeQ, planLesson, planReview, planBoss, planPlacement, endless, grammarQs, matchQ, canListen, build };
+  JP.Q = { infoQuiz, jpHtml, jpR, sentR, roSmall, exampleHtml, sayOf, makeQ, planLesson, planReview, planBoss, planPlacement, endless, grammarQs, matchQ, canListen, build };
 })();

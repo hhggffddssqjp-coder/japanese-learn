@@ -13,7 +13,7 @@
   function itemReveal(it) {
     const romaji = S.set.romaji;
     if (it.kind === 'kana') {
-      return `<div class="rv"><span class="rv-pic">${it.em || ''}</span><div class="rv-main"><div class="rv-jp" lang="ja">${esc(it.jp)} <small>${esc(it.ro)}</small></div>${it.word ? `<div class="rv-sub" lang="ja">${Q.exampleHtml(it)}　${esc(it.wordZh)}</div>` : ''}</div>${speakBtn(it.jp, 'inline')}</div>`;
+      return `<div class="rv"><span class="rv-pic">${it.em || ''}</span><div class="rv-main"><div class="rv-jp" lang="ja">${esc(it.jp)} <small>${esc(it.ro)}</small></div>${it.word ? `<div class="rv-sub" lang="ja">${Q.exampleHtml(it)}${S.set.romaji ? `<small class="ro-i"> ${esc(JP.toRomaji(it.word))}</small>` : ''}　${esc(it.wordZh)}</div>` : ''}</div>${speakBtn(it.jp, 'inline')}</div>`;
     }
     return `<div class="rv"><span class="rv-pic">${it.em}</span><div class="rv-main"><div class="rv-jp" lang="ja">${Q.jpHtml(it)}</div><div class="rv-sub">${romaji ? esc(it.ro) + '　' : ''}${esc(it.zh)}</div></div>${speakBtn(it.rd, 'inline')}</div>`;
   }
@@ -24,7 +24,7 @@
       <div class="tc-kana" lang="ja">${esc(it.jp)}</div>
       <div class="tc-ro">${esc(it.ro)}</div>
       <div class="tc-say">${speakBtn(it.jp, 'big')}${speakBtn(it.jp, 'slow', true)}</div>
-      ${it.word ? `<div class="tc-mn"><span class="mn-pic">${it.em}</span><div><div class="mn-word" lang="ja">${Q.exampleHtml(it)}</div><div class="mn-zh">${esc(it.wordZh)}</div></div>${speakBtn(it.word, 'inline')}</div>` : '<p class="tc-hint">拗音是「兩個假名合成一個音」，小字的ゃ／ゅ／ょ要和前面的字連在一起唸。</p>'}
+      ${it.word ? `<div class="tc-mn"><span class="mn-pic">${it.em}</span><div><div class="mn-word" lang="ja">${Q.exampleHtml(it)}</div>${S.set.romaji ? `<div class="mn-ro">${esc(JP.toRomaji(it.word))}</div>` : ''}<div class="mn-zh">${esc(it.wordZh)}</div></div>${speakBtn(it.word, 'inline')}</div>` : '<p class="tc-hint">拗音是「兩個假名合成一個音」，小字的ゃ／ゅ／ょ要和前面的字連在一起唸。</p>'}
       ${tip ? `<div class="tc-tip"><span>💡</span>${esc(tip)}</div>` : ''}
     </article>`;
   }
@@ -35,7 +35,7 @@
       ${S.set.romaji ? `<div class="tc-ro">${esc(it.ro)}</div>` : ''}
       <div class="tc-zh">${esc(it.zh)}</div>
       <div class="tc-say">${speakBtn(it.rd, 'big')}${speakBtn(it.rd, 'slow', true)}</div>
-      ${it.ex ? `<div class="tc-ex"><div class="ex-jp" lang="ja">${ruby(it.ex)}${speakBtn(plain(it.ex), 'inline')}</div><div class="ex-zh">${esc(it.exZh)}</div></div>` : ''}
+      ${it.ex ? `<div class="tc-ex"><div class="ex-jp" lang="ja">${ruby(it.ex)}${speakBtn(plain(it.ex), 'inline')}</div>${S.set.romaji ? `<div class="ex-ro">${esc(JP.sentRo(it.ex))}</div>` : ''}<div class="ex-zh">${esc(it.exZh)}</div></div>` : ''}
       ${it.tip ? `<div class="tc-tip"><span>💡</span>${esc(it.tip)}</div>` : ''}
     </article>`;
   }
@@ -48,7 +48,7 @@
       <div class="g-pat" lang="ja">${esc(g.pattern)}</div>
       <div class="g-body">${g.body}</div>
       <h4>例句</h4>
-      <ul class="g-ex">${g.examples.map(([s, zh]) => `<li><div class="ex-jp" lang="ja">${ruby(s)}${speakBtn(plain(s), 'inline')}</div><div class="ex-zh">${esc(zh)}</div></li>`).join('')}</ul>
+      <ul class="g-ex">${g.examples.map(([s, zh]) => `<li><div class="ex-jp" lang="ja">${ruby(s)}${speakBtn(plain(s), 'inline')}</div>${S.set.romaji ? `<div class="ex-ro">${esc(JP.sentRo(s))}</div>` : ''}<div class="ex-zh">${esc(zh)}</div></li>`).join('')}</ul>
     </article>`;
   }
 

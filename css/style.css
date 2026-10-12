@@ -493,3 +493,13 @@ button.banner { cursor: pointer; transition: transform .12s; } button.banner:hov
 .sync-user b { display: block; } .sync-user small { color: var(--muted); }
 .sync-err { color: var(--shu); font-weight: 700; font-size: .9rem; } code { background: var(--paper-2); border-radius: 6px; padding: 1px 6px; font-size: .85em; }
 .setrow small.voice-hint { margin-top: 2px; color: var(--ai); font-weight: 700; }
+
+/* 羅馬拼音輔助 */
+.jpw { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.35; }
+.choice .jpw { align-items: flex-start; }
+.ro, .s-ro, .ro-i { color: var(--muted); font-weight: 700; letter-spacing: .03em; font-family: var(--zh); }
+.jpw .ro { font-size: .72rem; } .q-jp .jpw .ro { font-size: 1.05rem; color: var(--ai); }
+.s-ro { display: block; font-size: .8rem; line-height: 1.4; margin-top: -4px; } .q-sent .s-ro { font-size: .95rem; color: var(--ai); margin-top: 0; } .choice .s-ro { font-size: .75rem; margin-top: -2px; }
+.tile { display: inline-flex; flex-direction: column; align-items: center; } .tile .ro { font-size: .65rem; line-height: 1; margin-top: -4px; }
+.ex-ro { color: var(--ai); font-weight: 700; font-size: .88rem; letter-spacing: .02em; margin: -4px 0 2px; line-height: 1.4; }
+.mn-ro { color: var(--ai); font-weight: 800; font-size: .9rem; letter-spacing: .04em; } .rv-sent .s-ro { color: var(--ai); }

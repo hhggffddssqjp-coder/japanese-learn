@@ -355,7 +355,8 @@
         ${sw('slow', '慢速發音', '播放時使用較慢的語速')}
         ${sw('sound', '音效', '答對、答錯、通關的聲音')}
         ${sw('haptic', '震動回饋', '手機上答題時震動')}
-        ${sw('romaji', '顯示羅馬拼音', '在單字下方顯示 Romaji')}
+        ${sw('romaji', '顯示羅馬拼音', '在教學卡、例句與答案旁顯示 Romaji')}
+        ${sw('romajiQ', '題目中也顯示羅馬拼音', '練習時在日文字與例句下方顯示拼音當輔助；想挑戰自己可關閉')}
         ${sw('furi', '顯示振假名', '在漢字上方顯示假名讀音')}
         <div class="setrow"><div><b>日語語音</b><small id="voice-note">${JP.tts.hasJa ? `偵測到 ${voices.length} 個日語語音` : JP.tts.ok ? '尚未偵測到日語語音' : '此瀏覽器不支援語音'}</small><small id="voice-hint" class="voice-hint">${voiceHint()}</small></div><div class="voice-box">${voiceSel}<button type="button" class="btn btn-sm" data-act="testvoice">試聽</button></div></div>
         <details class="voice-help" ${JP.tts.hasJa && JP.tts.best <= 1 ? '' : 'open'}><summary>沒有聲音，或聲音不自然？如何取得更好的日語語音</summary><ul>
