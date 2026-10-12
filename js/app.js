@@ -9,8 +9,8 @@
     const b = e.target.closest('[data-say]');
     if (!b) return;
     e.preventDefault();
-    if (!JP.tts.ok) return JP.ui.toast('這個瀏覽器不支援語音播放');
-    if (!JP.tts.hasJa) JP.ui.toast('找不到日語語音，聲音可能不準確');
+    if (!JP.tts.ok && !JP.tts.hq()) return JP.ui.toast('這個瀏覽器不支援語音播放');
+    if (!JP.tts.can()) JP.ui.toast('找不到日語語音，聲音可能不準確');
     b.classList.add('playing');
     JP.sfx.unlock();
     JP.tts.speak(b.dataset.say, { slow: b.dataset.slow ? true : undefined }).then(() => b.classList.remove('playing'));

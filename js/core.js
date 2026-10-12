@@ -108,7 +108,7 @@
     cards: {},
     stats: { answered: 0, correct: 0, listening: 0, bestCombo: 0, lessons: 0, perfects: 0, blitz: 0, reviews: 0, bossWins: 0 },
     ach: {}, stamps: {},
-    set: { sound: true, haptic: true, voice: '', slow: false, auto: true, romaji: true, romajiQ: true, furi: true, theme: 'auto' },
+    set: { sound: true, haptic: true, voice: '', slow: false, auto: true, romaji: true, romajiQ: true, hq: true, furi: true, theme: 'auto' },
   });
   function loadState() {
     const d = defaults();
@@ -266,11 +266,32 @@
     },
     list() { return voices; },
     current() { return voices.find((v) => v.name === S.set.voice) || voices[0] || null; },
-    cancel() { if (hasTTS) speechSynthesis.cancel(); },
+    cancel() { try { if (au) au.pause(); } catch (e) { /* 略過 */ } if (hasTTS) speechSynthesis.cancel(); },
+    // 預錄高品質語音（audio/manifest.json 存在時啟用）
+    manifest: null,
+    hq() { return !!(tts.manifest && S.set.hq !== false); },
+    can() { return tts.hq() || (hasTTS && tts.hasJa); },
+    loadManifest() {
+      try {
+        fetch('audio/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).then((m) => {
+          if (m && m.normal) { tts.manifest = m; JP.emit('voices'); }
+        }).catch(() => { /* 沒有預錄音檔就用裝置語音 */ });
+      } catch (e) { /* 略過 */ }
+    },
     speak(text, opts = {}) {
+      if (!text) return Promise.resolve(false);
+      const slow = opts.slow !== undefined ? opts.slow : S.set.slow;
+      if (tts.hq()) {
+        const f = (slow ? tts.manifest.slow : tts.manifest.normal) && (slow ? tts.manifest.slow : tts.manifest.normal)[text];
+        if (f) return playFile(f).then((ok) => ok || tts.speakDevice(text, opts));
+      }
+      return tts.speakDevice(text, opts);
+    },
+    speakDevice(text, opts = {}) {
       return new Promise((resolve) => {
         if (!hasTTS || !text) return resolve(false);
         try {
+          if (au) au.pause();
           tts.lastError = '';
           const u = new SpeechSynthesisUtterance(text);
           u.lang = 'ja-JP';
@@ -289,18 +310,44 @@
         } catch (e) { tts.lastError = 'error'; resolve(false); }
       });
     },
-    // 第一次互動時「解鎖」語音（iOS 規定要在使用者操作中啟動過）
+    // 第一次互動時「解鎖」語音與音檔播放（iOS 規定要在使用者操作中啟動過）
     unlock() {
-      if (!hasTTS || tts._unlocked) return;
+      if (tts._unlocked) return;
       tts._unlocked = true;
+      try {
+        const a = audioEl();
+        a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+        const pr = a.play(); if (pr && pr.catch) pr.catch(() => {});
+      } catch (e) { /* 略過 */ }
+      if (!hasTTS) return;
       try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) { /* 略過 */ }
     },
   };
+  // 共用同一個 <audio>，iOS 解鎖一次後就能一直使用
+  let au = null;
+  function audioEl() { if (!au) { au = new Audio(); au.preload = 'auto'; } return au; }
+  function playFile(file) {
+    return new Promise((resolve) => {
+      const a = audioEl();
+      let done = false;
+      const fin = (r) => { if (!done) { done = true; a.onended = a.onerror = null; resolve(r); } };
+      a.onended = () => fin(true);
+      a.onerror = () => fin(false);
+      try {
+        if (hasTTS) speechSynthesis.cancel();
+        a.src = 'audio/' + file;
+        const pr = a.play();
+        if (pr && pr.catch) pr.catch(() => fin(false));
+      } catch (e) { fin(false); }
+      setTimeout(() => fin(false), 12000);
+    });
+  }
   if (hasTTS) {
     tts.refresh();
     try { speechSynthesis.addEventListener('voiceschanged', tts.refresh); } catch (e) { speechSynthesis.onvoiceschanged = tts.refresh; }
   }
   JP.tts = tts;
+  tts.loadManifest();
 
   /* ───────────── 音效（WebAudio 合成，不需音檔） ───────────── */
   let actx = null;

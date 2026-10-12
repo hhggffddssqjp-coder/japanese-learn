@@ -97,6 +97,7 @@
     return `<div class="card banner done"><span class="bn-ico">✅</span><div><b>今天的複習都完成了</b><small>到「練習」頁還有更多玩法</small></div></div>`;
   }
   function voiceBanner() {
+    if (JP.tts.hq()) return '';
     if (!JP.tts.ok) return `<div class="card banner warn"><span class="bn-ico">🔇</span><div><b>這個瀏覽器不支援語音播放</b><small>建議改用 Chrome、Edge 或 Safari，聽力題會自動略過</small></div></div>`;
     if (!JP.tts.hasJa) return `<button type="button" class="card banner warn" data-go="me" data-voice-help="1"><span class="bn-ico">🔇</span><div><b>找不到日語語音</b><small>聽力題會暫時略過，點這裡看如何安裝</small></div><span class="bn-cta">設定</span></button>`;
     return '';
@@ -118,7 +119,7 @@
     for (;;) {
       const cfg = factory();
       if (!cfg) return;
-      if (!Q.canListen() && !launch.warned) { launch.warned = true; if (JP.tts.ok && !JP.tts.hasJa) toast('找不到日語語音，聽力題先略過囉'); }
+      if (!Q.canListen() && !launch.warned) { launch.warned = true; if (JP.tts.ok && !JP.tts.can()) toast('找不到日語語音，聽力題先略過囉'); }
       const res = await JP.play(cfg);
       const r = res && (res.result || (res.kind ? res : null));
       if (r && r.kind === 'placement' && r.startWorld && r.startWorld !== 'intro') JP.startAtWorld(r.startWorld);
@@ -269,7 +270,7 @@
       status = `熟練度 ${boxDots(c.box)}　答對 ${c.ok} 次・答錯 ${c.ng} 次<br>${days <= 0 ? '現在可以複習' : `下次複習：${days} 天後`}`;
     }
     const m = modal(`<div class="dsheet">${JP.cardOf(it)}<div class="ds-status">${status}</div></div>`, { sheet: true });
-    if (S.set.auto && JP.tts.hasJa) setTimeout(() => JP.tts.speak(Q.sayOf(it)), 300);
+    if (S.set.auto && JP.tts.can()) setTimeout(() => JP.tts.speak(Q.sayOf(it)), 300);
     return m;
   }
 
@@ -358,7 +359,8 @@
         ${sw('romaji', '顯示羅馬拼音', '在教學卡、例句與答案旁顯示 Romaji')}
         ${sw('romajiQ', '題目中也顯示羅馬拼音', '練習時在日文字與例句下方顯示拼音當輔助；想挑戰自己可關閉')}
         ${sw('furi', '顯示振假名', '在漢字上方顯示假名讀音')}
-        <div class="setrow"><div><b>日語語音</b><small id="voice-note">${JP.tts.hasJa ? `偵測到 ${voices.length} 個日語語音` : JP.tts.ok ? '尚未偵測到日語語音' : '此瀏覽器不支援語音'}</small><small id="voice-hint" class="voice-hint">${voiceHint()}</small></div><div class="voice-box">${voiceSel}<button type="button" class="btn btn-sm" data-act="testvoice">試聽</button></div></div>
+        ${JP.tts.manifest ? sw('hq', '使用預錄高品質語音', '單字、假名與例句使用預先錄好的自然發音；關閉則改用裝置內建語音') : ''}
+        <div class="setrow"><div><b>${JP.tts.manifest ? '裝置語音（備用）' : '日語語音'}</b><small id="voice-note">${JP.tts.hasJa ? `偵測到 ${voices.length} 個日語語音` : JP.tts.ok ? '尚未偵測到日語語音' : '此瀏覽器不支援語音'}</small><small id="voice-hint" class="voice-hint">${voiceHint()}</small></div><div class="voice-box">${voiceSel}<button type="button" class="btn btn-sm" data-act="testvoice">試聽</button></div></div>
         <details class="voice-help" ${JP.tts.hasJa && JP.tts.best <= 1 ? '' : 'open'}><summary>沒有聲音，或聲音不自然？如何取得更好的日語語音</summary><ul>
           <li><b>發音品質差別很大</b>：名稱含 <b>Natural／Online／Enhanced／Premium／Siri</b> 的是高品質語音（類神經網路），其他多半是機械感較重的基本語音。</li>
           <li><b>iPhone / iPad</b>：設定 → 輔助使用 → 語音內容 → 聲音 → 日文，選 <b>Kyoko 或 Otoya</b>，點旁邊的雲朵圖示下載<b>「強化」（Enhanced）或「Siri」</b>版本，再回到這裡選它。<b>側邊的靜音開關要關掉（不要露出橘色）</b>，音量調大；按「試聽」沒聲音時，先重新整理頁面再試一次。</li>
@@ -402,8 +404,8 @@
   }
 
   async function testVoice() {
-    if (!JP.tts.ok) return toast('此瀏覽器不支援語音');
-    if (!JP.tts.hasJa) toast('找不到日語語音，聲音可能不是日語');
+    if (!JP.tts.ok && !JP.tts.hq()) return toast('此瀏覽器不支援語音');
+    if (!JP.tts.can()) toast('找不到日語語音，聲音可能不是日語');
     else toast('🔊 播放中…（聽不到的話，請看下方「沒有聲音？」）');
     const ok = await JP.tts.speak('こんにちは。にほんごを べんきょう しましょう。');
     const err = JP.tts.lastError;

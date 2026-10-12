@@ -163,7 +163,7 @@
           pb.innerHTML = `<div class="tdots">${items.map((_, i) => `<i class="${i === ti ? 'on' : i < ti ? 'done' : ''}"></i>`).join('')}</div><div class="tcard-wrap" key="${ti}">${cardOf(it)}</div>`;
           const last = ti === items.length - 1;
           pf.innerHTML = `${ti > 0 ? `<button type="button" class="btn btn-ghost" data-act="tprev" aria-label="上一個">${ICON.back()}</button>` : ''}<button type="button" class="btn btn-big" data-act="${last ? 'start' : 'tnext'}" autofocus>${last ? '開始挑戰' : '下一個'}</button>`;
-          if (S.set.auto && JP.tts.hasJa) setTimeout(() => { if (phase === 'teach') JP.tts.speak(Q.sayOf(it)); }, 350);
+          if (S.set.auto && JP.tts.can()) setTimeout(() => { if (phase === 'teach') JP.tts.speak(Q.sayOf(it)); }, 350);
         }
         progress(); hud();
         root.querySelector('.play-scroll').scrollTop = 0;
@@ -268,8 +268,8 @@
         if (ok && st.combo >= 3 && [3, 5, 8, 10, 15, 20].includes(st.combo)) setTimeout(() => JP.sfx.combo(st.combo), 260);
         const btn = pf.querySelector('[data-act="next"]'); if (btn) btn.focus({ preventScroll: true });
         // 答對後讀出答案（聽力題已經聽過，略過）
-        if (ok && S.set.auto && rv.say && !q.listening && JP.tts.hasJa) setTimeout(() => JP.tts.speak(rv.say), 220);
-        if (!ok && S.set.auto && rv.say && JP.tts.hasJa) setTimeout(() => JP.tts.speak(rv.say), 220);
+        if (ok && S.set.auto && rv.say && !q.listening && JP.tts.can()) setTimeout(() => JP.tts.speak(rv.say), 220);
+        if (!ok && S.set.auto && rv.say && JP.tts.can()) setTimeout(() => JP.tts.speak(rv.say), 220);
         hud(); progress();
         if (cfg.kind === 'blitz') nextTimer = setTimeout(afterFeedback, ok ? 650 : 1700);
       }
@@ -310,12 +310,12 @@
         if (phase !== 'ask' || cur.done || btn.classList.contains('ok')) return;
         const side = btn.dataset.side, id = btn.dataset.id;
         if (cur.pick && cur.pick.side === side) { cur.pick.btn.classList.remove('sel'); cur.pick = btn.classList.contains('sel') ? null : { side, id, btn }; if (cur.pick) btn.classList.add('sel'); return; }
-        if (!cur.pick) { cur.pick = { side, id, btn }; btn.classList.add('sel'); const p = cur.q.pairs.find((x) => x.id === id); if (side === 'l' && JP.tts.hasJa && S.set.auto) JP.tts.speak(p.say); return; }
+        if (!cur.pick) { cur.pick = { side, id, btn }; btn.classList.add('sel'); const p = cur.q.pairs.find((x) => x.id === id); if (side === 'l' && JP.tts.can() && S.set.auto) JP.tts.speak(p.say); return; }
         const a = cur.pick; cur.pick = null; a.btn.classList.remove('sel');
         if (a.id === id) {
           [a.btn, btn].forEach((b) => { b.classList.add('ok'); b.disabled = true; });
           cur.matched.add(id); JP.sfx.tap(); JP.buzz(8);
-          const p = cur.q.pairs.find((x) => x.id === id); if (JP.tts.hasJa && S.set.auto) JP.tts.speak(p.say);
+          const p = cur.q.pairs.find((x) => x.id === id); if (JP.tts.can() && S.set.auto) JP.tts.speak(p.say);
           if (cur.matched.size === cur.q.pairs.length) {
             cur.done = true;
             const ok = cur.wrongPairs.size === 0;
