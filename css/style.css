@@ -47,10 +47,11 @@
 .w-indigo { --wc: #4d63b8; --wc-d: #354a90; --wc-soft: #e0e5f6; }
 .w-peach { --wc: #ee8a45; --wc-d: #c0632a; --wc-soft: #fde8d6; }
 .w-teal { --wc: #1f9e92; --wc-d: #137368; --wc-soft: #d6f1ed; }
+.w-plum { --wc: #9a4f9e; --wc-d: #743778; --wc-soft: #f1e1f2; }
 .w-gold { --wc: #d99a1e; --wc-d: #a8740c; --wc-soft: #fbefc8; }
-:root[data-theme="dark"] .w-peach, :root[data-theme="dark"] .w-sakura, :root[data-theme="dark"] .w-sea, :root[data-theme="dark"] .w-matcha, :root[data-theme="dark"] .w-vermilion, :root[data-theme="dark"] .w-indigo, :root[data-theme="dark"] .w-teal, :root[data-theme="dark"] .w-gold { --wc-soft: color-mix(in srgb, var(--wc) 22%, var(--card)); }
+:root[data-theme="dark"] .w-peach, :root[data-theme="dark"] .w-sakura, :root[data-theme="dark"] .w-sea, :root[data-theme="dark"] .w-matcha, :root[data-theme="dark"] .w-vermilion, :root[data-theme="dark"] .w-indigo, :root[data-theme="dark"] .w-teal, :root[data-theme="dark"] .w-plum, :root[data-theme="dark"] .w-gold { --wc-soft: color-mix(in srgb, var(--wc) 22%, var(--card)); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .w-peach, :root:not([data-theme="light"]) .w-sakura, :root:not([data-theme="light"]) .w-sea, :root:not([data-theme="light"]) .w-matcha, :root:not([data-theme="light"]) .w-vermilion, :root:not([data-theme="light"]) .w-indigo, :root:not([data-theme="light"]) .w-teal, :root:not([data-theme="light"]) .w-gold { --wc-soft: color-mix(in srgb, var(--wc) 22%, var(--card)); }
+  :root:not([data-theme="light"]) .w-peach, :root:not([data-theme="light"]) .w-sakura, :root:not([data-theme="light"]) .w-sea, :root:not([data-theme="light"]) .w-matcha, :root:not([data-theme="light"]) .w-vermilion, :root:not([data-theme="light"]) .w-indigo, :root:not([data-theme="light"]) .w-teal, :root:not([data-theme="light"]) .w-plum, :root:not([data-theme="light"]) .w-gold { --wc-soft: color-mix(in srgb, var(--wc) 22%, var(--card)); }
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }

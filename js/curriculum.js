@@ -48,6 +48,7 @@
     { id: 'n5b', title: '毎日の生活', zh: 'N5・日常生活', sub: '動詞、形容詞與基本句型', em: '🏯', theme: 'indigo', level: 'N5' },
     { id: 'n5c', title: 'もっと日本語', zh: 'N5・擴充單字', sub: '星期、季節、職業、蔬果、動作與形容詞', em: '🎋', theme: 'teal', level: 'N5' },
     { id: 'n4', title: 'ひろがる世界', zh: 'N4・進階表達', sub: '家人、旅行、心情與更多句型', em: '🗻', theme: 'gold', level: 'N4' },
+    { id: 'n4b', title: 'さらに先へ', zh: 'N4・擴充進階', sub: '醫院、工作、旅行、動詞形容詞與更多句型', em: '🏔️', theme: 'plum', level: 'N4' },
   ];
 
   const NODES = [];
@@ -140,6 +141,8 @@
   bossOf('n5c', 'N5 擴充・鬼關');
   seq('n4', ['family', 'clothes', 'school', 'shopping', 'town', 'restaurant', 'health', 'g:nai', 'verb4', 'verb5', 'g:ta-koto', 'feeling', 'g:dekiru', 'travel', 'g:kara', 'adj3', 'g:naru', 'g:hou']);
   bossOf('n4', 'N4 魔王・鬼關');
+  seq('n4b', ['hospital', 'emotion2', 'g:kudasai', 'g:teiru', 'school2', 'work', 'g:temo', 'g:mashou', 'house3', 'trans2', 'g:yori', 'verb10', 'verb11', 'g:node', 'verb12', 'travel2', 'g:to-omou', 'culture', 'hobby', 'g:nagara', 'verb13', 'media', 'tech', 'g:mae-ato', 'verb14', 'verb15', 'g:tara', 'post', 'adj7', 'adj8', 'adj9', 'g:nakereba', 'adverb1', 'adverb2', 'time2', 'g:tsumori']);
+  bossOf('n4b', 'N4 擴充・鬼關');
 
   // 鬼關題庫：該世界所有項目
   WORLDS.forEach((w) => {
@@ -194,11 +197,11 @@
   const currentNode = () => NODES[Math.min(S.unlocked, NODES.length - 1)];
 
   // 課程版本升級（新增關卡會改變索引）：依已完成的關卡重新計算解鎖進度
-  if (S.cv !== 4) {
+  if (S.cv !== 5) {
     let m = -1;
     NODES.forEach((n) => { const q = S.nodes[n.id]; if (q && (q.stars > 0 || q.skipped)) m = Math.max(m, n.idx); });
     S.unlocked = Math.max(0, Math.min(NODES.length - 1, m + 1));
-    S.cv = 4; JP.save();
+    S.cv = 5; JP.save();
   }
 
   Object.assign(JP, { WORLDS, NODES, nodeById, worldNodes, stateOf, completeNode, skipWorld, startAtWorld, worldOf, worldStars, worldCleared, currentNode, gmap, lessonMap });
