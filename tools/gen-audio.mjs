@@ -37,7 +37,7 @@ function loadData() {
   const sandbox = { window: {}, console };
   sandbox.window.window = sandbox.window;
   vm.createContext(sandbox);
-  for (const f of ['data-kana', 'data-words', 'data-words-extra', 'data-grammar']) {
+  for (const f of ['data-kana', 'data-words', 'data-words-extra', 'data-words-n4a', 'data-words-n4b', 'data-grammar', 'data-grammar-n4']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f + '.js'), 'utf8'), sandbox, { filename: f });
   }
   return sandbox.window.JP;
