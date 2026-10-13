@@ -45,7 +45,8 @@
     return out;
   }
   function wordDistractors(it, n, keyFn) {
-    const ok = (c) => c.id !== it.id && c.zh !== it.zh && c.jp !== it.jp && c.em !== it.em;
+    // 讀音相同的字（如 帰る／変える）不能同時當選項，否則聽力題與羅馬拼音題會有兩個答案
+    const ok = (c) => c.id !== it.id && c.zh !== it.zh && c.jp !== it.jp && c.em !== it.em && c.rd !== it.rd;
     const w = lessonWorld[it.lesson];
     const same = shuffle(wordsAll.filter((c) => c.lesson === it.lesson && ok(c)));
     const near = shuffle(wordsAll.filter((c) => c.lesson !== it.lesson && lessonWorld[c.lesson] === w && ok(c)));
@@ -454,5 +455,5 @@
     ]);
   }
 
-  JP.Q = { infoQuiz, jpHtml, jpR, sentR, roSmall, exampleHtml, sayOf, makeQ, planLesson, planReview, planBoss, planPlacement, endless, grammarQs, matchQ, canListen, build };
+  JP.Q = { infoQuiz, jpHtml, jpR, sentR, roSmall, exampleHtml, sayOf, makeQ, planLesson, planReview, planBoss, planPlacement, endless, grammarQs, matchQ, canListen, build, B };
 })();
