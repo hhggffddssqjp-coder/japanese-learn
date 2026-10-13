@@ -36,6 +36,7 @@ Settings → Pages → Deploy from a branch → 選擇分支與 `/ (root)`。所
 | `js/data-words-n4a.js` / `n4b.js` | N4 擴充單字（名詞主題／動詞形容詞副詞）各 12 課 |
 | `js/data-grammar-n4.js` | N4 擴充文法 12 課 |
 | `tools/validate-data.mjs` | 題庫格式檢查（`node tools/validate-data.mjs`） |
+| `tools/smoke-test.mjs` | 出題冒煙測試（每關／每字／每題型反覆出題並檢查）；與資料檢查一起由 `.github/workflows/check.yml` 在 PR 時自動執行 |
 | `js/data-grammar.js` | 文法課（N5 10 課、N4 6 課；擴充見 data-grammar-n4.js） |
 | `js/core.js` | 進度儲存、等級／連勝、SRS、語音、音效、羅馬拼音 |
 | `js/curriculum.js` | 世界與關卡組成、解鎖與跳級 |
