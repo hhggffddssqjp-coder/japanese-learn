@@ -8,7 +8,7 @@
      DRY_RUN=1 node tools/gen-audio.mjs                     只計算字數與費用估計，不呼叫 Google
      LIST_VOICES=1 GOOGLE_TTS_KEY=xxxx node tools/gen-audio.mjs   列出可用的日語語音
      MOCK=1 node tools/gen-audio.mjs                         測試用：產生靜音檔，不呼叫 Google
-   環境變數：VOICE（預設 ja-JP-Neural2-B）、MAX_CHARS（字元上限，預設 60000，超過就中止）、SLOW=0 可不產生慢速版 */
+   環境變數：VOICE（預設 ja-JP-Neural2-B）、MAX_CHARS（字元上限，預設 60000；工作流程設為 120000，超過就中止）、SLOW=0 可不產生慢速版 */
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -37,7 +37,8 @@ function loadData() {
   const sandbox = { window: {}, console };
   sandbox.window.window = sandbox.window;
   vm.createContext(sandbox);
-  for (const f of ['data-kana', 'data-words', 'data-words-extra', 'data-words-n4a', 'data-words-n4b', 'data-grammar', 'data-grammar-n4']) {
+  const banks = fs.readdirSync(path.join(ROOT, 'js')).filter((f) => /^bank-.+\.js$/.test(f)).map((f) => f.replace(/\.js$/, '')).sort();
+  for (const f of ['data-kana', 'data-words', 'data-words-extra', 'data-words-n4a', 'data-words-n4b', 'data-grammar', 'data-grammar-n4', ...banks]) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f + '.js'), 'utf8'), sandbox, { filename: f });
   }
   return sandbox.window.JP;
@@ -51,6 +52,8 @@ function collectTexts() {
   [K.hiraBasic, K.hiraDakuten, K.kataBasic, K.kataDakuten].forEach((list) => list.forEach(([ch, , word]) => { set.add(ch); set.add(word); }));
   K.yoonRows.forEach(([ch]) => { set.add(ch); set.add(K.toKata(ch)); });
   JP.LESSONS.forEach((l) => l.words.forEach(([jp, rd, , , ex, , , ex2]) => { set.add(rd || jp); if (ex) set.add(plain(ex)); if (ex2) set.add(plain(ex2)); }));
+  // 單字庫：讀音與例句
+  Object.values(JP.BANK || {}).forEach((rows) => rows.forEach(([jp, rd, , , ex]) => { set.add(rd || jp); if (ex) set.add(plain(ex)); }));
   JP.GRAMMAR.forEach((g) => {
     g.examples.forEach(([s]) => set.add(plain(s)));
     g.quiz.forEach(([stem, ans]) => set.add(stem.replace(/（.*?）\s*$/, '').replace(/＿+/g, ans)));

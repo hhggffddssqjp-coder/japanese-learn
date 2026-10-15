@@ -30,7 +30,8 @@
   }
   function wordCard(it) {
     return `<article class="tcard">
-      <div class="tc-pic" aria-hidden="true">${it.em}</div>
+      ${it.em ? `<div class="tc-pic" aria-hidden="true">${it.em}</div>` : ''}
+      ${it.lv || it.pos ? `<div class="tc-tags">${it.lv ? `<span>${esc(it.lv)}</span>` : ''}${it.pos ? `<span>${esc(it.pos)}</span>` : ''}</div>` : ''}
       <div class="tc-jp" lang="ja">${Q.jpHtml(it)}</div>
       ${S.set.romaji ? `<div class="tc-ro">${esc(it.ro)}</div>` : ''}
       <div class="tc-zh">${esc(it.zh)}</div>
@@ -156,7 +157,7 @@
           pb.innerHTML = grammarTeach(cfg.teachGrammar);
           pf.innerHTML = `<button type="button" class="btn btn-big" data-act="start" autofocus>我學會了，開始挑戰</button>`;
         } else if (useGrid) {
-          pb.innerHTML = `<h2 class="q-title">新的字，先點一點聽聽看</h2><div class="tgrid">${items.map((it) => `<button type="button" class="tg" data-say="${esc(it.kind === 'kana' ? it.jp : it.rd)}" lang="ja"><span class="tg-c">${esc(it.jp)}</span><span class="tg-r">${esc(it.ro)}</span>${it.em ? `<span class="tg-e">${it.em}</span>` : ''}</button>`).join('')}</div>${items.some((i) => i.yoon) ? '<p class="tc-hint">拗音是「兩個假名合成一個音」，例如 き＋ゃ → きゃ（kya）。</p>' : '<p class="tc-hint">每個字右下角的圖是「記憶點」，把圖和聲音連在一起記。</p>'}`;
+          pb.innerHTML = `<h2 class="q-title">新的字，先點一點聽聽看</h2><div class="tgrid">${items.map((it) => `<button type="button" class="tg" data-say="${esc(it.kind === 'kana' ? it.jp : it.rd)}" lang="ja"><span class="tg-c">${esc(it.jp)}</span><span class="tg-r">${esc(it.ro)}</span>${it.em ? `<span class="tg-e">${it.em}</span>` : ''}</button>`).join('')}</div>${items.some((i) => i.yoon) ? '<p class="tc-hint">拗音是「兩個假名合成一個音」，例如 き＋ゃ → きゃ（kya）。</p>' : (items.some((i) => i.em) ? '<p class="tc-hint">每個字右下角的圖是「記憶點」，把圖和聲音連在一起記。</p>' : '<p class="tc-hint">先聽一遍每個字的發音，接著會看到解釋與例句。</p>')}`;
           pf.innerHTML = `<button type="button" class="btn btn-big" data-act="start" autofocus>開始挑戰</button>`;
         } else {
           const it = items[ti];

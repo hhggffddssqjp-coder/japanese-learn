@@ -29,6 +29,8 @@
   JP.views.bind();
   window.addEventListener('hashchange', JP.views.route);
   JP.views.route();
+  // 學過單字庫的人：先把單字庫載入，複習清單才看得到這些單字
+  JP.bank.LEVELS.forEach((l) => { if (JP.bank.hasProgress(l.id)) JP.bank.load(l.id).then(() => JP.views.refresh()).catch(() => {}); });
   if (!S.onboarded) JP.views.showWelcome();
 
   // 跨日時自動更新連勝顯示

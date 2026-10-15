@@ -178,14 +178,14 @@
   }
 
   /* ───────────── 圖鑑 ───────────── */
-  const dexState = { tab: 'word', filter: 'all', script: 'hira', q: '' };
+  const dexState = { tab: 'word', filter: 'all', script: 'hira', q: '', lv: 'all', pos: 'all' };
   const lessonNode = {};
   JP.NODES.forEach((n) => { if (n.lesson) lessonNode[n.lesson] = n; });
 
   function boxDots(box) { return `<span class="mastery" title="熟練度">${Array.from({ length: 5 }, (_, i) => `<i class="${i < Math.ceil((box / JP.MAX_BOX) * 5) ? 'on' : ''}"></i>`).join('')}</span>`; }
 
   function viewDex() {
-    const words = JP.itemList('word');
+    const words = JP.itemList('word').filter((w) => !w.bank);
     const got = words.filter((w) => S.cards[w.id]).length;
     const kana = JP.itemList('kana');
     const gotK = kana.filter((k) => S.cards[k.id]).length;
@@ -200,7 +200,9 @@
     if (dexState.tab === 'kana') { el.innerHTML = kanaTables(); return; }
     const q = dexState.q.trim().toLowerCase();
     const filters = [['all', '全部'], ['got', '已收集'], ['todo', '未收集'], ['weak', '需加強']];
-    let html = `<div class="dex-tools"><input id="dex-q" class="search" type="search" placeholder="搜尋日文、中文或羅馬拼音" value="${esc(dexState.q)}" aria-label="搜尋單字"><div class="chips-f">${filters.map(([k, l]) => `<button type="button" class="fchip ${dexState.filter === k ? 'on' : ''}" data-dfilter="${k}">${l}</button>`).join('')}</div></div>`;
+    let html = `<div class="dex-tools"><input id="dex-q" class="search" type="search" placeholder="搜尋日文、中文或羅馬拼音" value="${esc(dexState.q)}" aria-label="搜尋單字"><div class="chips-f">${filters.map(([k, l]) => `<button type="button" class="fchip ${dexState.filter === k ? 'on' : ''}" data-dfilter="${k}">${l}</button>`).join('')}</div>
+      <div class="chips-f">${[['all', '所有級別'], ['N5', 'N5'], ['N4', 'N4'], ['N3', 'N3'], ['N2', 'N2'], ['N1', 'N1']].map(([k, l]) => `<button type="button" class="fchip ${dexState.lv === k ? 'on' : ''}" data-dlv="${k}">${l}</button>`).join('')}</div>
+      <div class="chips-f">${[['all', '所有詞性'], ['名詞', '名詞'], ['動詞', '動詞'], ['形容詞', '形容詞'], ['副詞', '副詞']].map(([k, l]) => `<button type="button" class="fchip ${dexState.pos === k ? 'on' : ''}" data-dpos="${k}">${l}</button>`).join('')}</div></div>`;
     let any = false;
     JP.WORLDS.filter((w) => w.nodes.some((n) => n.lesson)).forEach((w) => {
       const blocks = w.nodes.filter((n) => n.lesson).map((n) => {
@@ -211,6 +213,8 @@
           if (dexState.filter === 'got' && !c) return false;
           if (dexState.filter === 'todo' && c) return false;
           if (dexState.filter === 'weak' && !(c && (c.ng > c.ok || c.box <= 1))) return false;
+          if (dexState.lv !== 'all' && it.lv !== dexState.lv) return false;
+          if (dexState.pos !== 'all' && !it.pos.includes(dexState.pos)) return false;
           if (q) return c && (it.jp.includes(q) || it.rd.includes(q) || it.zh.toLowerCase().includes(q) || it.ro.includes(q));
           return true;
         });
@@ -317,9 +321,41 @@
         ${card('p-weak', '🎯', '弱點加強', '集中練習常常答錯的項目', weak ? `<b>${weak}</b>個弱點` : '<b>0</b>太強了', 'weak', !weak)}
         ${card('p-listen', '👂', '聽力特訓', listenOk ? '只聽聲音選答案，訓練耳朵' : '需要裝置有日語語音', `<b>${S.stats.listening}</b>累計答對`, 'listen', !learned || !listenOk)}
         ${card('p-blitz', '⚡', '閃電挑戰', '60 秒內盡量多答對，挑戰個人紀錄', `<b>${S.stats.blitz}</b>最佳紀錄`, 'blitz', learned < 6)}
+        ${card('p-bank', '📚', '單字庫・N3', '約 2,000 個 N3 單字，沒有圖片，直接背', '<b>N3</b>開放', 'bank', false)}
         ${card('p-place', '🧭', '程度測驗', '12 題判斷你的程度，並調整起點', '2 分鐘', 'placement', false)}
       </div>
       ${!learned ? '<p class="hint-p">先去「學習」完成第一個關卡，就能解鎖練習。</p>' : ''}</div>`;
+  }
+
+  /* ───────────── 單字庫 ───────────── */
+  const bankState = { level: 'n3' };
+  function viewBank() {
+    const cfg = JP.bank.LEVELS.find((l) => l.id === bankState.level);
+    const data = JP.bank.get(cfg.id);
+    const head = `<header class="page-h"><a class="back-link" href="#/practice">‹ 練習</a><h1>單字庫・${cfg.label}</h1><p>用開放的 JLPT 單字表整理而成，沒有圖片，用「日中互選、聽音、讀音、例句」加間隔複習來記。每 ${JP.bank.SIZE} 字一組。</p></header>`;
+    if (!data || !data.items) {
+      main().innerHTML = `<div class="page wbank">${head}<div class="empty"><div>📚</div><p id="bank-status">載入單字庫中…</p></div></div>`;
+      JP.bank.load(cfg.id).then(() => { if (currentRoute === 'bank') viewBank(); }).catch(() => {
+        const el = document.getElementById('bank-status');
+        if (el) el.innerHTML = '載入失敗，請確認網路後 <button type="button" class="link-btn" data-bank-retry="1">重試</button>';
+      });
+      return;
+    }
+    const gs = data.groups;
+    const learned = data.items.filter((it) => S.cards[it.id]).length;
+    const doneN = gs.filter((g) => ((S.nodes[g.id] || {}).stars || 0) > 0).length;
+    const cur = gs.find((g) => !((S.nodes[g.id] || {}).stars > 0));
+    const cells = gs.map((g, i) => {
+      const st = (S.nodes[g.id] || {}).stars || 0;
+      return `<button type="button" class="bgrp ${st ? 'done' : ''} ${cur === g ? 'current' : ''}" data-bank="${esc(g.id)}" aria-label="第 ${i + 1} 組，${st} 顆星"><b>${i + 1}</b><span>${[0, 1, 2].map((k) => `<i class="${k < st ? 'on' : ''}">${ICON.star()}</i>`).join('')}</span></button>`;
+    }).join('');
+    main().innerHTML = `<div class="page wbank">${head}
+      <p class="bank-note">⚠️ JLPT 沒有官方單字表，級別是社群整理的，僅供參考；中文釋義與例句由 AI 撰寫，可能有誤，建議搭配辭典確認。</p>
+      <div class="card bank-stat"><div><b>${learned}</b><small>已學單字</small></div><div><b>${data.items.length}</b><small>單字總數</small></div><div><b>${doneN}/${gs.length}</b><small>完成組數</small></div></div>
+      ${cur ? `<button type="button" class="btn btn-big bank-go" data-bank="${esc(cur.id)}">${doneN ? '繼續' : '開始'}第 ${gs.indexOf(cur) + 1} 組</button>` : ''}
+      <div class="bgrid">${cells}</div>
+      <p class="bank-credit">單字表來自 <a href="https://github.com/jamsinclair/open-anki-jlpt-decks" target="_blank" rel="noopener">open-anki-jlpt-decks</a>（MIT；整理自 Jonathan Waller 的 JLPT Resources，CC BY）。讀音以該表為準。</p>
+    </div>`;
   }
 
   /* ───────────── 我的 ───────────── */
@@ -509,12 +545,13 @@
   }
 
   /* ───────────── 路由與重繪 ───────────── */
-  const ROUTES = { learn: viewLearn, dex: viewDex, practice: viewPractice, me: viewMe };
+  const ROUTES = { learn: viewLearn, dex: viewDex, practice: viewPractice, me: viewMe, bank: viewBank };
   let currentRoute = 'learn';
+  const tabOf = (r) => (r === 'bank' ? 'practice' : r);
   function route() {
     const name = (location.hash.replace(/^#\/?/, '').split('/')[0] || 'learn');
     currentRoute = ROUTES[name] ? name : 'learn';
-    document.querySelectorAll('[data-tab]').forEach((a) => { a.classList.toggle('on', a.dataset.tab === currentRoute); if (a.dataset.tab === currentRoute) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    document.querySelectorAll('[data-tab]').forEach((a) => { a.classList.toggle('on', a.dataset.tab === tabOf(currentRoute)); if (a.dataset.tab === tabOf(currentRoute)) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     ROUTES[currentRoute]();
     if (currentRoute !== 'learn') window.scrollTo({ top: 0, behavior: 'instant' });
     updateChips();
@@ -538,6 +575,8 @@
       const t = e.target;
       let el;
       if ((el = t.closest('[data-node]'))) return openNode(el.dataset.node);
+      if ((el = t.closest('[data-bank]'))) return openNode(el.dataset.bank);
+      if (t.closest('[data-bank-retry]')) return viewBank();
       if ((el = t.closest('[data-testout]'))) return testOut(el.dataset.testout);
       if ((el = t.closest('[data-go]'))) {
         if (el.dataset.disabled) { toast('先去闖幾個關卡再來吧'); return; }
@@ -546,10 +585,13 @@
         if (g === 'review' || g === 'weak' || g === 'listen') return launch(() => reviewConfig(g));
         if (g === 'blitz') return launch(blitzConfig);
         if (g === 'placement') return launch(placementConfig);
+        if (g === 'bank') { location.hash = '#/bank'; return; }
         return;
       }
       if ((el = t.closest('[data-dtab]'))) { dexState.tab = el.dataset.dtab; return viewDex(); }
       if ((el = t.closest('[data-dfilter]'))) { dexState.filter = el.dataset.dfilter; return renderDexBody(); }
+      if ((el = t.closest('[data-dlv]'))) { dexState.lv = el.dataset.dlv; return renderDexBody(); }
+      if ((el = t.closest('[data-dpos]'))) { dexState.pos = el.dataset.dpos; return renderDexBody(); }
       if ((el = t.closest('[data-script]'))) { dexState.script = el.dataset.script; return viewDex(); }
       if ((el = t.closest('[data-word]'))) return openWordSheet(el.dataset.word);
       if ((el = t.closest('[data-kana]'))) return openWordSheet(el.dataset.kana);

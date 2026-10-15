@@ -28,12 +28,16 @@
   });
 
   const RO_FIX = { こんにちは: 'konnichiwa', こんばんは: 'konbanwa' }; // は 作助詞時讀 wa
+  // 詞性（簡易推定：依課程名稱）
+  const NA_I = new Set(['きれい', '嫌い', '大嫌い', '有名', '綺麗']);
+  const posOf = (lid, jp) => (/^verb/.test(lid) ? '動詞' : /^adj/.test(lid) ? (/い$/.test(jp) && !NA_I.has(jp) ? 'い形容詞' : 'な形容詞') : /^adverb/.test(lid) ? '副詞' : '名詞');
   JP.LESSONS.forEach((l) => {
     l.words.forEach(([jp, rd, zh, em, ex, exZh, tip, ex2, ex2Zh]) => {
       const id = `w:${jp}`;
       ITEMS.set(id, {
         id, kind: 'word', jp, rd: rd || jp, hasKanji: !!rd && rd !== jp, ro: RO_FIX[jp] || JP.toRomaji(rd || jp), zh, em,
         ex, exZh, tip, exs: [[ex, exZh], [ex2, ex2Zh]].filter((e) => e[0]), lesson: l.id, noOrder: !!l.noOrder,
+        pos: posOf(l.id, jp), lv: (JP.WORD_LV || {})[jp] || '',
       });
     });
   });
@@ -143,6 +147,10 @@
   bossOf('n4', 'N4 魔王・鬼關');
   seq('n4b', ['hospital', 'emotion2', 'g:kudasai', 'g:teiru', 'school2', 'work', 'g:temo', 'g:mashou', 'house3', 'trans2', 'g:yori', 'verb10', 'verb11', 'g:node', 'verb12', 'travel2', 'g:to-omou', 'culture', 'hobby', 'g:nagara', 'verb13', 'media', 'tech', 'g:mae-ato', 'verb14', 'verb15', 'g:tara', 'post', 'adj7', 'adj8', 'adj9', 'g:nakereba', 'adverb1', 'adverb2', 'time2', 'g:tsumori']);
   bossOf('n4b', 'N4 擴充・鬼關');
+
+  // 沒有出現在 JLPT 單字表的單字，依所屬世界推定級別
+  const WORLD_LV = { n5a: 'N5', n5b: 'N5', n5c: 'N5', n4: 'N4', n4b: 'N4' };
+  NODES.forEach((n) => { if (n.type === 'lesson') n.items.forEach((id) => { const it = ITEMS.get(id); if (it && !it.lv) it.lv = WORLD_LV[n.world] || ''; }); });
 
   // 鬼關題庫：該世界所有項目
   WORLDS.forEach((w) => {

@@ -18,12 +18,15 @@ globalThis.document = { addEventListener() {}, getElementById() { return null; }
 const jsDir = path.join(ROOT, 'js');
 const load = (f) => require(path.join(jsDir, f + '.js'));
 const extra = (re) => fs.readdirSync(jsDir).filter((f) => re.test(f)).map((f) => f.replace(/\.js$/, '')).sort();
-['data-kana', 'data-words', 'data-words-extra', ...extra(/^data-words-(?!extra)/), 'data-grammar', ...extra(/^data-grammar-/), 'core', 'curriculum', 'achievements'].forEach(load);
+['data-kana', 'data-words', 'data-words-extra', ...extra(/^data-words-(?!extra)/), 'data-word-levels', 'data-grammar', ...extra(/^data-grammar-/), 'core', 'curriculum', 'achievements'].forEach(load);
 const JP = window.JP;
 let listening = true;
 JP.tts = { ok: true, hasJa: true, can: () => listening, list: () => [], current: () => null, cancel() {}, speak() {} };
 JP.ui = { speakBtn: () => '', ICON: {} };
 load('questions');
+load('bank');
+const bankLevels = fs.readdirSync(jsDir).filter((f) => /^bank-.+\.js$/.test(f)).map((f) => f.replace(/^bank-|\.js$/g, ''));
+bankLevels.forEach((id) => { load('bank-' + id); JP.bank.register(id); });
 const Q = JP.Q;
 
 const problems = [];
@@ -41,11 +44,13 @@ function check(q, where) {
     if (new Set(keys).size !== keys.length) bad(`${where}/${q.sub}: 選項 key 重複 ${q.itemId || q.stem || ''}`);
     const texts = cs.map((c) => plain(c.html));
     if (new Set(texts).size !== texts.length) bad(`${where}/${q.sub}: 選項文字重複 ${texts.join(' / ')}`);
-    // 讀音相同的字不能同時當選項（單字題）
-    const its = cs.map((c) => JP.item(c.key)).filter((x) => x && x.kind === 'word');
-    if (its.length === cs.length && !/^(sent2zh|zh2sent)$/.test(q.sub)) {
-      const rds = its.map((x) => x.rd);
-      if (new Set(rds).size !== rds.length) bad(`${where}/${q.sub}: 選項中有同音字 ${its.map((x) => x.jp).join('/')}`);
+    // 聽音、讀音、羅馬拼音題：正確答案的讀音不能和任何干擾選項相同（否則會有兩個答案）
+    if (/^(listen2jp|listen2zh|listen2pic|jp2ro|ro2jp|jp2rd|listen2ro)$/.test(q.sub)) {
+      const right = cs.find((c) => c.correct);
+      const ri = right && JP.item(right.key);
+      if (ri && ri.kind === 'word') {
+        cs.filter((c) => !c.correct).forEach((c) => { const o = JP.item(c.key); if (o && o.kind === 'word' && o.rd === ri.rd) bad(`${where}/${q.sub}: 干擾選項與答案同音 ${ri.jp}/${o.jp}`); });
+      }
     }
   } else if (q.type === 'order') {
     const have = (q.tiles || []).map((t) => JP.plain(t.t));
@@ -64,7 +69,8 @@ function check(q, where) {
 for (const mode of [true, false]) {
   listening = mode;
   const tag = mode ? '有聽力' : '無聽力';
-  for (const n of JP.NODES) {
+  const bankGroups = bankLevels.flatMap((id) => JP.bank.get(id).groups).filter((_, i) => i % 6 === 0); // 單字庫組數多，抽樣檢查
+  for (const n of JP.NODES.concat(bankGroups)) {
     if (n.type === 'info') continue;
     for (let k = 0; k < 4; k++) {
       let qs;
@@ -82,7 +88,7 @@ for (const mode of [true, false]) {
   const rdCount = {};
   JP.itemList('word').forEach((it) => { rdCount[it.rd] = (rdCount[it.rd] || 0) + 1; });
   JP.itemList().forEach((it) => {
-    const rounds = it.kind === 'word' && rdCount[it.rd] > 1 ? 40 : 3; // 有同音字的單字多抽幾次
+    const rounds = it.bank ? 1 : it.kind === 'word' && rdCount[it.rd] > 1 ? 40 : 3; // 有同音字的單字多抽幾次；單字庫字數多，每字只抽一次
     for (let k = 0; k < rounds; k++) {
       for (const s of (subs.length ? subs : [])) {
         let q;
@@ -94,6 +100,6 @@ for (const mode of [true, false]) {
 }
 
 const nWords = JP.itemList('word').length;
-console.log(`世界 ${JP.WORLDS.length}、關卡 ${JP.NODES.length}、單字 ${nWords}、文法 ${JP.GRAMMAR.length}`);
+console.log(`世界 ${JP.WORLDS.length}、關卡 ${JP.NODES.length}、單字 ${nWords}（含單字庫 ${JP.itemList('word').filter((w) => w.bank).length}）、文法 ${JP.GRAMMAR.length}`);
 if (problems.length) { console.log(`發現 ${problems.length} 個問題：`); problems.slice(0, 60).forEach((p) => console.log(' -', p)); process.exit(1); }
 console.log('冒煙測試通過 ✓');

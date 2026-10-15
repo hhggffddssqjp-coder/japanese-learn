@@ -1,0 +1,877 @@
+[
+{
+"jp": "炒める",
+"rd": "いためる",
+"en": "to stir-fry"
+},
+{
+"jp": "防ぐ",
+"rd": "ふせぐ",
+"en": "to defend (against), to protect, to prevent"
+},
+{
+"jp": "知能",
+"rd": "ちのう",
+"en": "intelligence, brains"
+},
+{
+"jp": "トレーニング",
+"rd": "トレーニング",
+"en": "training"
+},
+{
+"jp": "狩り",
+"rd": "かり",
+"en": "hunting"
+},
+{
+"jp": "驚き",
+"rd": "おどろき",
+"en": "surprise, astonishment, wonder"
+},
+{
+"jp": "収穫",
+"rd": "しゅうかく",
+"en": "harvest, crop, ingathering"
+},
+{
+"jp": "構成",
+"rd": "こうせい",
+"en": "organization, composition"
+},
+{
+"jp": "転校",
+"rd": "てんこう",
+"en": "change schools"
+},
+{
+"jp": "ノー",
+"rd": "ノー",
+"en": "no"
+},
+{
+"jp": "蕎麦",
+"rd": "そば",
+"en": "soba (buckwheat noodles)"
+},
+{
+"jp": "かもしれない",
+"rd": "かもしれない",
+"en": "maybe, perhaps"
+},
+{
+"jp": "閉じる",
+"rd": "とじる",
+"en": "to close (e.g., book, eyes), to shut"
+},
+{
+"jp": "もしかすると",
+"rd": "もしかすると",
+"en": "perhaps, maybe, by some chance"
+},
+{
+"jp": "実現",
+"rd": "じつげん",
+"en": "implementation, materialization, realization"
+},
+{
+"jp": "結ぶ",
+"rd": "むすぶ",
+"en": "to tie, to bind, to link"
+},
+{
+"jp": "更に",
+"rd": "さらに",
+"en": "furthermore, moreover"
+},
+{
+"jp": "軒",
+"rd": "のき",
+"en": "eaves"
+},
+{
+"jp": "擦る",
+"rd": "する",
+"en": "to rub, to chafe"
+},
+{
+"jp": "欠く",
+"rd": "かく",
+"en": "to lack, to crack"
+},
+{
+"jp": "決行",
+"rd": "けっこう",
+"en": "doing (with resolve), carrying out (e.g., a plan)"
+},
+{
+"jp": "岸",
+"rd": "きし",
+"en": "bank, coast, shore"
+},
+{
+"jp": "官僚",
+"rd": "かんりょう",
+"en": "bureaucrat, bureaucracy"
+},
+{
+"jp": "ノック",
+"rd": "ノック",
+"en": "knock; fungo (baseball)"
+},
+{
+"jp": "可能",
+"rd": "かのう",
+"en": "possible, practicable, feasible"
+},
+{
+"jp": "密",
+"rd": "みつ",
+"en": "thick, close"
+},
+{
+"jp": "種類",
+"rd": "しゅるい",
+"en": "variety, kind"
+},
+{
+"jp": "小麦",
+"rd": "こむぎ",
+"en": "wheat"
+},
+{
+"jp": "策",
+"rd": "さく",
+"en": "plan, policy"
+},
+{
+"jp": "さっぱり",
+"rd": "さっぱり",
+"en": "feeling refreshed, neat"
+},
+{
+"jp": "句",
+"rd": "く",
+"en": "phrase"
+},
+{
+"jp": "どうぞよろしく",
+"rd": "どうぞよろしく",
+"en": "pleased to meet you"
+},
+{
+"jp": "デモ",
+"rd": "デモ",
+"en": "demo, demonstration"
+},
+{
+"jp": "精算",
+"rd": "せいさん",
+"en": "exact calculation, adjustment"
+},
+{
+"jp": "それでも",
+"rd": "それでも",
+"en": "but (still), and yet, nevertheless"
+},
+{
+"jp": "順",
+"rd": "じゅん",
+"en": "order, turn"
+},
+{
+"jp": "建設",
+"rd": "けんせつ",
+"en": "construction, foundation"
+},
+{
+"jp": "灰",
+"rd": "はい",
+"en": "ash"
+},
+{
+"jp": "映る",
+"rd": "うつる",
+"en": "to be reflected, to come out (photo)"
+},
+{
+"jp": "泳ぎ",
+"rd": "およぎ",
+"en": "swimming"
+},
+{
+"jp": "畑",
+"rd": "はたけ",
+"en": "field, patch"
+},
+{
+"jp": "詳しい",
+"rd": "くわしい",
+"en": "detailed; full; accurate"
+},
+{
+"jp": "国会",
+"rd": "こっかい",
+"en": "National Diet, parliament, congress"
+},
+{
+"jp": "異なる",
+"rd": "ことなる",
+"en": "to differ, to vary"
+},
+{
+"jp": "ですから",
+"rd": "ですから",
+"en": "therefore"
+},
+{
+"jp": "それぞれ",
+"rd": "それぞれ",
+"en": "each, every, respectively"
+},
+{
+"jp": "莫大",
+"rd": "ばくだい",
+"en": "enormous, vast"
+},
+{
+"jp": "餌",
+"rd": "えさ",
+"en": "feed, bait"
+},
+{
+"jp": "刺さる",
+"rd": "ささる",
+"en": "to stick, to be stuck"
+},
+{
+"jp": "有効",
+"rd": "ゆうこう",
+"en": "valid, effectual"
+},
+{
+"jp": "にっこり",
+"rd": "にっこり",
+"en": "smile sweetly, smile, grin"
+},
+{
+"jp": "案外",
+"rd": "あんがい",
+"en": "unexpectedly"
+},
+{
+"jp": "ピクニック",
+"rd": "ピクニック",
+"en": "picnic"
+},
+{
+"jp": "半ば",
+"rd": "なかば",
+"en": "middle, halfway"
+},
+{
+"jp": "人種",
+"rd": "じんしゅ",
+"en": "race (of people)"
+},
+{
+"jp": "軍",
+"rd": "ぐん",
+"en": "army, force, troops"
+},
+{
+"jp": "立場",
+"rd": "たちば",
+"en": "standpoint, position, situation"
+},
+{
+"jp": "性質",
+"rd": "せいしつ",
+"en": "nature, property, disposition"
+},
+{
+"jp": "応援",
+"rd": "おうえん",
+"en": "aid, assistance, help"
+},
+{
+"jp": "湿る",
+"rd": "しめる",
+"en": "to be wet, to be damp"
+},
+{
+"jp": "碗",
+"rd": "わん",
+"en": "bowl"
+},
+{
+"jp": "ボート",
+"rd": "ボート",
+"en": "rowing boat"
+},
+{
+"jp": "強力",
+"rd": "きょうりょく",
+"en": "powerful, strong"
+},
+{
+"jp": "楽器",
+"rd": "がっき",
+"en": "musical instrument"
+},
+{
+"jp": "重視",
+"rd": "じゅうし",
+"en": "importance, stress"
+},
+{
+"jp": "稲",
+"rd": "いね",
+"en": "rice-plant"
+},
+{
+"jp": "営業",
+"rd": "えいぎょう",
+"en": "business, trade, management"
+},
+{
+"jp": "進める",
+"rd": "すすめる",
+"en": "to advance, to promote, to hasten"
+},
+{
+"jp": "質",
+"rd": "しつ",
+"en": "quality, nature (of person)"
+},
+{
+"jp": "貴重",
+"rd": "きちょう",
+"en": "precious, valuable"
+},
+{
+"jp": "混ざる",
+"rd": "まざる",
+"en": "to be mixed, to mingle with"
+},
+{
+"jp": "努力",
+"rd": "どりょく",
+"en": "great effort, exertion, endeavor"
+},
+{
+"jp": "高速",
+"rd": "こうそく",
+"en": "high speed, high gear"
+},
+{
+"jp": "酔う",
+"rd": "よう",
+"en": "to get drunk"
+},
+{
+"jp": "核",
+"rd": "かく",
+"en": "nucleus, kernel"
+},
+{
+"jp": "影",
+"rd": "かげ",
+"en": "shade, shadow, other side"
+},
+{
+"jp": "器械",
+"rd": "きかい",
+"en": "instrument"
+},
+{
+"jp": "熱帯",
+"rd": "ねったい",
+"en": "tropics"
+},
+{
+"jp": "恋人",
+"rd": "こいびと",
+"en": "lover; sweetheart; girlfriend"
+},
+{
+"jp": "演技",
+"rd": "えんぎ",
+"en": "acting, performance"
+},
+{
+"jp": "妙",
+"rd": "みょう",
+"en": "strange, unusual"
+},
+{
+"jp": "離婚",
+"rd": "りこん",
+"en": "divorce"
+},
+{
+"jp": "宝",
+"rd": "たから",
+"en": "treasure"
+},
+{
+"jp": "あいにく",
+"rd": "あいにく",
+"en": "unfortunately"
+},
+{
+"jp": "成功",
+"rd": "せいこう",
+"en": "success, hit"
+},
+{
+"jp": "瓶",
+"rd": "びん",
+"en": "bottle"
+},
+{
+"jp": "注目",
+"rd": "ちゅうもく",
+"en": "notice, attention, observation"
+},
+{
+"jp": "できれば",
+"rd": "できれば",
+"en": "if possible…"
+},
+{
+"jp": "争う",
+"rd": "あらそう",
+"en": "to dispute, to argue, to fight"
+},
+{
+"jp": "維持",
+"rd": "いじ",
+"en": "maintenance, preservation"
+},
+{
+"jp": "一時",
+"rd": "いちじ",
+"en": "for a time, temporarily"
+},
+{
+"jp": "思い付く",
+"rd": "おもいつく",
+"en": "to think of, to hit upon"
+},
+{
+"jp": "野党",
+"rd": "やとう",
+"en": "opposition party"
+},
+{
+"jp": "わがまま",
+"rd": "わがまま",
+"en": "selfishness, egoism, willfulness"
+},
+{
+"jp": "資源",
+"rd": "しげん",
+"en": "resources"
+},
+{
+"jp": "気味",
+"rd": "きみ",
+"en": "-like, -looking, -looked"
+},
+{
+"jp": "生長",
+"rd": "せいちょう",
+"en": "growth"
+},
+{
+"jp": "気温",
+"rd": "きおん",
+"en": "temperature (weather - not used for things)"
+},
+{
+"jp": "観察",
+"rd": "かんさつ",
+"en": "observation, survey"
+},
+{
+"jp": "常識",
+"rd": "じょうしき",
+"en": "common sense"
+},
+{
+"jp": "整理",
+"rd": "せいり",
+"en": "sorting, arrangement"
+},
+{
+"jp": "留学",
+"rd": "りゅうがく",
+"en": "studying abroad"
+},
+{
+"jp": "ジェット機",
+"rd": "ジェットき",
+"en": "jet plane"
+},
+{
+"jp": "有機",
+"rd": "ゆうき",
+"en": "organic"
+},
+{
+"jp": "地球",
+"rd": "ちきゅう",
+"en": "the earth"
+},
+{
+"jp": "骨折",
+"rd": "こっせつ",
+"en": "bone fracture"
+},
+{
+"jp": "前者",
+"rd": "ぜんしゃ",
+"en": "the former"
+},
+{
+"jp": "一言",
+"rd": "ひとこと",
+"en": "one word"
+},
+{
+"jp": "ぶつける",
+"rd": "ぶつける",
+"en": "to knock, to strike hard, to hit and attack"
+},
+{
+"jp": "料金",
+"rd": "りょうきん",
+"en": "fee, charge, fare"
+},
+{
+"jp": "道徳",
+"rd": "どうとく",
+"en": "morals"
+},
+{
+"jp": "国家",
+"rd": "こっか",
+"en": "state, country, nation"
+},
+{
+"jp": "愉快",
+"rd": "ゆかい",
+"en": "pleasant, happy"
+},
+{
+"jp": "望み",
+"rd": "のぞみ",
+"en": "wish, desire, (a) hope"
+},
+{
+"jp": "マーケット",
+"rd": "マーケット",
+"en": "market"
+},
+{
+"jp": "快適",
+"rd": "かいてき",
+"en": "pleasant, agreeable"
+},
+{
+"jp": "嗅ぐ",
+"rd": "かぐ",
+"en": "to sniff, to smell"
+},
+{
+"jp": "予防",
+"rd": "よぼう",
+"en": "prevention, protection against"
+},
+{
+"jp": "他",
+"rd": "た",
+"en": "other (esp. places and things)"
+},
+{
+"jp": "譲る",
+"rd": "ゆずる",
+"en": "to turn over, to assign, to hand over"
+},
+{
+"jp": "通勤",
+"rd": "つうきん",
+"en": "commuting to work"
+},
+{
+"jp": "当てる",
+"rd": "あてる",
+"en": "to hit; to apply to"
+},
+{
+"jp": "寮",
+"rd": "りょう",
+"en": "hostel, dormitory"
+},
+{
+"jp": "抜ける",
+"rd": "ぬける",
+"en": "to come out, to fall out, to be omitted"
+},
+{
+"jp": "論争",
+"rd": "ろんそう",
+"en": "controversy, dispute"
+},
+{
+"jp": "就職",
+"rd": "しゅうしょく",
+"en": "finding employment"
+},
+{
+"jp": "茹でる",
+"rd": "ゆでる",
+"en": "to boil"
+},
+{
+"jp": "元",
+"rd": "もと",
+"en": "origin, original; former"
+},
+{
+"jp": "角",
+"rd": "かく",
+"en": "angle"
+},
+{
+"jp": "現場",
+"rd": "げんば",
+"en": "actual spot, scene, field"
+},
+{
+"jp": "担当",
+"rd": "たんとう",
+"en": "(in) charge"
+},
+{
+"jp": "穴",
+"rd": "あな",
+"en": "hole"
+},
+{
+"jp": "体重",
+"rd": "たいじゅう",
+"en": "(body) weight"
+},
+{
+"jp": "打つ",
+"rd": "ぶつ",
+"en": "to hit, to strike"
+},
+{
+"jp": "恐らく",
+"rd": "おそらく",
+"en": "perhaps"
+},
+{
+"jp": "時期",
+"rd": "じき",
+"en": "time, season, period"
+},
+{
+"jp": "もしも",
+"rd": "もしも",
+"en": "if"
+},
+{
+"jp": "オフィス",
+"rd": "オフィス",
+"en": "office"
+},
+{
+"jp": "混乱",
+"rd": "こんらん",
+"en": "chaos, confusion, mayhem"
+},
+{
+"jp": "たとえ",
+"rd": "たとえ",
+"en": "even if, no matter, though"
+},
+{
+"jp": "工場",
+"rd": "こうば",
+"en": "factory, plant"
+},
+{
+"jp": "生涯",
+"rd": "しょうがい",
+"en": "one's lifetime"
+},
+{
+"jp": "断つ",
+"rd": "たつ",
+"en": "to sever, to cut off"
+},
+{
+"jp": "位",
+"rd": "くらい",
+"en": "grade, rank, about"
+},
+{
+"jp": "タイプライター",
+"rd": "タイプライター",
+"en": "typewriter"
+},
+{
+"jp": "冗談",
+"rd": "じょうだん",
+"en": "a joke"
+},
+{
+"jp": "動かす",
+"rd": "うごかす",
+"en": "to move, to shift"
+},
+{
+"jp": "解く",
+"rd": "とく",
+"en": "to unfasten; answer, solve"
+},
+{
+"jp": "流れ",
+"rd": "ながれ",
+"en": "stream, current"
+},
+{
+"jp": "傷",
+"rd": "きず",
+"en": "wound, injury, hurt"
+},
+{
+"jp": "不",
+"rd": "ふ",
+"en": "un(~), non(~), negative prefix"
+},
+{
+"jp": "深める",
+"rd": "ふかめる",
+"en": "to deepen, to heighten, to intensify"
+},
+{
+"jp": "診察",
+"rd": "しんさつ",
+"en": "medical examination (of a patient)"
+},
+{
+"jp": "部分",
+"rd": "ぶぶん",
+"en": "portion, section, part"
+},
+{
+"jp": "基本",
+"rd": "きほん",
+"en": "basic, basis"
+},
+{
+"jp": "審判",
+"rd": "しんぱん",
+"en": "umpire, referee, judgment"
+},
+{
+"jp": "目標",
+"rd": "もくひょう",
+"en": "mark, objective, target"
+},
+{
+"jp": "存在",
+"rd": "そんざい",
+"en": "existence, being"
+},
+{
+"jp": "小包",
+"rd": "こづつみ",
+"en": "parcel, package"
+},
+{
+"jp": "場面",
+"rd": "ばめん",
+"en": "scene, setting (e.g., of novel)"
+},
+{
+"jp": "鍋",
+"rd": "なべ",
+"en": "saucepan, pot"
+},
+{
+"jp": "決まり",
+"rd": "きまり",
+"en": "settlement, conclusion, rule"
+},
+{
+"jp": "輪",
+"rd": "わ",
+"en": "ring, hoop, circle"
+},
+{
+"jp": "供",
+"rd": "とも",
+"en": "accompanying, attendant, companion, retinue"
+},
+{
+"jp": "眺め",
+"rd": "ながめ",
+"en": "scene; view; prospect; outlook"
+},
+{
+"jp": "名",
+"rd": "な",
+"en": "name, reputation"
+},
+{
+"jp": "実",
+"rd": "み",
+"en": "fruit, seed, good result"
+},
+{
+"jp": "毒",
+"rd": "どく",
+"en": "poison, toxicant"
+},
+{
+"jp": "視点",
+"rd": "してん",
+"en": "opinion, point of view, visual point"
+},
+{
+"jp": "演奏",
+"rd": "えんそう",
+"en": "musical performance"
+},
+{
+"jp": "スケジュール",
+"rd": "スケジュール",
+"en": "schedule"
+},
+{
+"jp": "兎",
+"rd": "うさぎ",
+"en": "rabbit, hare"
+},
+{
+"jp": "脂",
+"rd": "あぶら",
+"en": "fat"
+},
+{
+"jp": "炊く",
+"rd": "たく",
+"en": "to boil, to cook"
+},
+{
+"jp": "器用",
+"rd": "きよう",
+"en": "skillful, handy"
+}
+]
