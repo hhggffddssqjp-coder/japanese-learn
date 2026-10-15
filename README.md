@@ -35,6 +35,9 @@ Settings → Pages → Deploy from a branch → 選擇分支與 `/ (root)`。所
 | `js/data-words-extra.js` | 第二例句（每字）與 N5 擴充單字 28 課 |
 | `js/data-words-n4a.js` / `n4b.js` | N4 擴充單字（名詞主題／動詞形容詞副詞）各 12 課 |
 | `js/data-grammar-n4.js` | N4 擴充文法 12 課 |
+| `js/bank.js`, `js/bank-n3.js` | 單字庫（N3，約 2,000 字、無圖片）：資料檔在使用時才載入 |
+| `tools/build-bank.mjs`, `tools/bank-src/` | 單字庫資料處理：`in-XX.json` 為 JLPT 單字表（單字、讀音、英文），`out-XX.json` 為 AI 撰寫的中文釋義、詞性與例句；`node tools/build-bank.mjs n3 build` 合併成 `js/bank-n3.js` |
+| `tools/build-word-levels.mjs`, `js/data-word-levels.js` | 既有單字的 JLPT 級別標示 |
 | `tools/validate-data.mjs` | 題庫格式檢查（`node tools/validate-data.mjs`） |
 | `tools/smoke-test.mjs` | 出題冒煙測試（每關／每字／每題型反覆出題並檢查）；與資料檢查一起由 `.github/workflows/check.yml` 在 PR 時自動執行 |
 | `js/data-grammar.js` | 文法課（N5 10 課、N4 6 課；擴充見 data-grammar-n4.js） |
@@ -55,3 +58,10 @@ Settings → Pages → Deploy from a branch → 選擇分支與 `/ (root)`。所
 ## 語音說明
 
 發音取決於裝置是否有日語語音。找不到日語語音時，聽力題會自動略過；「我的」頁面有各系統安裝日語語音的說明。
+
+## 資料來源與授權（單字庫與 JLPT 級別）
+
+- JLPT 沒有官方公布的單字表，本專案的級別標示與單字庫來自社群整理，**僅供參考**。
+- 單字、讀音與英文釋義取自 [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks)（MIT；內容整理自 [Jonathan Waller 的 JLPT Resources](http://www.tanos.co.uk/jlpt/)，CC BY）。
+- 單字庫的繁體中文釋義、詞性與例句由 AI 撰寫，**可能有誤**，建議搭配辭典確認；發現錯誤歡迎回報。
+- 其餘單字、例句與文法說明為本專案自行撰寫。

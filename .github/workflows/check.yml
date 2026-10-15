@@ -26,5 +26,7 @@ jobs:
           if [ -f audio/manifest.json ]; then node -e "JSON.parse(require('fs').readFileSync('audio/manifest.json','utf8'))"; fi
       - name: 題庫資料檢查
         run: node tools/validate-data.mjs
+      - name: 單字庫資料檢查（翻譯結果與輸入一致）
+        run: node tools/build-bank.mjs n3 check
       - name: 出題冒煙測試
         run: node tools/smoke-test.mjs

@@ -46,7 +46,7 @@ jobs:
           GOOGLE_TTS_KEY: ${{ secrets.GOOGLE_TTS_KEY }}
           VOICE: ${{ inputs.voice }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
-          MAX_CHARS: '60000'
+          MAX_CHARS: '120000'
 
       - name: 提交音檔
         if: ${{ !inputs.list_voices && !inputs.dry_run }}
