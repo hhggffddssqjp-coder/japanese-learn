@@ -1,9 +1,9 @@
 /* 離線快取：優先連線，失敗時使用快取（含字型） */
-const CACHE = 'nihongo-v8';
+const CACHE = 'nihongo-v9';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
-  'js/data-kana.js', 'js/data-words.js', 'js/data-words-extra.js', 'js/data-words-n4a.js', 'js/data-words-n4b.js', 'js/data-word-levels.js', 'js/data-grammar.js', 'js/data-grammar-n4.js', 'js/core.js', 'js/curriculum.js', 'js/achievements.js',
-  'js/ui.js', 'js/questions.js', 'js/player.js', 'js/bank.js', 'js/views.js', 'js/sync-config.js', 'js/sync.js', 'js/app.js',
+  'js/data-kana.js', 'js/data-words.js', 'js/data-words-extra.js', 'js/data-words-n4a.js', 'js/data-words-n4b.js', 'js/data-word-levels.js', 'js/data-grammar.js', 'js/data-grammar-n4.js', 'js/data-phrases-daily.js', 'js/data-phrases-travel.js', 'js/core.js', 'js/curriculum.js', 'js/achievements.js',
+  'js/ui.js', 'js/questions.js', 'js/player.js', 'js/bank.js', 'js/views.js', 'js/practice.js', 'js/sync-config.js', 'js/sync.js', 'js/app.js',
 ];
 
 self.addEventListener('install', (e) => {

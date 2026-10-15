@@ -194,6 +194,24 @@
     renderDexBody();
   }
 
+  // 全站搜尋：日文、假名、羅馬字、中文；沒學過的字與 N3 單字庫也查得到
+  function dexSearch(q) {
+    const bankLoaded = !JP.bank.LEVELS.some((l) => !(JP.bank.get(l.id) && JP.bank.get(l.id).items));
+    if (!bankLoaded && !dexSearch.loading) {
+      dexSearch.loading = true;
+      Promise.all(JP.bank.LEVELS.map((l) => JP.bank.load(l.id))).catch(() => {}).then(() => { dexSearch.loading = false; if (currentRoute === 'dex') renderDexBody(); });
+    }
+    const hit = (it) => it.jp.includes(q) || it.rd.includes(q) || it.zh.toLowerCase().includes(q) || it.ro.includes(q) || JP.toHira(it.jp).includes(q);
+    const all = JP.itemList('word').filter((it) => hit(it) && (dexState.lv === 'all' || it.lv === dexState.lv) && (dexState.pos === 'all' || it.pos.includes(dexState.pos)));
+    // 完全相同的排前面
+    all.sort((a, b) => (+(b.jp === q || b.rd === q || b.zh === q)) - (+(a.jp === q || a.rd === q || a.zh === q)));
+    const shown = all.slice(0, 80);
+    const rows = shown.map((it) => {
+      const c = S.cards[it.id];
+      return `<button type="button" class="srow" data-word="${esc(it.id)}" lang="ja"><span class="sr-jp">${esc(it.jp)}</span><span class="sr-mid"><small>${esc(it.hasKanji ? it.rd : it.ro)}</small><b>${esc(it.zh)}</b></span><span class="sr-tags">${it.lv ? `<i>${esc(it.lv)}</i>` : ''}${it.pos ? `<i>${esc(it.pos)}</i>` : ''}${c ? '<i class="got">已學</i>' : ''}</span></button>`;
+    }).join('');
+    return `<p class="srch-n">找到 ${all.length} 個單字${all.length > shown.length ? `，顯示前 ${shown.length} 個` : ''}${bankLoaded ? '' : '（單字庫載入中…）'}</p><div class="srows">${rows || '<div class="empty"><div>🔍</div><p>找不到符合的單字</p></div>'}</div>`;
+  }
   function renderDexBody() {
     const el = document.getElementById('dex-body');
     if (!el) return;
@@ -203,6 +221,7 @@
     let html = `<div class="dex-tools"><input id="dex-q" class="search" type="search" placeholder="搜尋日文、中文或羅馬拼音" value="${esc(dexState.q)}" aria-label="搜尋單字"><div class="chips-f">${filters.map(([k, l]) => `<button type="button" class="fchip ${dexState.filter === k ? 'on' : ''}" data-dfilter="${k}">${l}</button>`).join('')}</div>
       <div class="chips-f">${[['all', '所有級別'], ['N5', 'N5'], ['N4', 'N4'], ['N3', 'N3'], ['N2', 'N2'], ['N1', 'N1']].map(([k, l]) => `<button type="button" class="fchip ${dexState.lv === k ? 'on' : ''}" data-dlv="${k}">${l}</button>`).join('')}</div>
       <div class="chips-f">${[['all', '所有詞性'], ['名詞', '名詞'], ['動詞', '動詞'], ['形容詞', '形容詞'], ['副詞', '副詞']].map(([k, l]) => `<button type="button" class="fchip ${dexState.pos === k ? 'on' : ''}" data-dpos="${k}">${l}</button>`).join('')}</div></div>`;
+    if (q) { el.innerHTML = html + dexSearch(q); const inp0 = document.getElementById('dex-q'); if (inp0 && document.activeElement && document.activeElement.id === 'dex-q') inp0.setSelectionRange(inp0.value.length, inp0.value.length); return; }
     let any = false;
     JP.WORLDS.filter((w) => w.nodes.some((n) => n.lesson)).forEach((w) => {
       const blocks = w.nodes.filter((n) => n.lesson).map((n) => {
@@ -264,6 +283,14 @@
       ${sec('清音', KANA_GRID.basic, 5)}${sec('濁音・半濁音', KANA_GRID.dakuten, 5)}<h3 class="ktitle">拗音</h3><div class="kgrid c3">${yoonCells}</div>`;
   }
 
+  // 同主題單字（同一課／同一組）
+  function relatedHtml(it) {
+    if (it.kind !== 'word') return '';
+    const rel = JP.itemList('word').filter((w) => w.lesson === it.lesson && w.id !== it.id);
+    if (!rel.length) return '';
+    return `<div class="related"><h4>同主題單字</h4><div class="rel-grid">${rel.map((w) => `<button type="button" class="rel-chip" data-rel="${esc(w.id)}" lang="ja"><b>${esc(w.jp)}${w.lv ? `<i>${esc(w.lv)}</i>` : ''}</b><small>${esc(w.hasKanji ? w.rd + '・' : '')}${esc(w.zh)}</small></button>`).join('')}</div></div>`;
+  }
+  JP.relatedHtml = relatedHtml;
   function openWordSheet(id) {
     const it = JP.item(id);
     const c = S.cards[id];
@@ -273,7 +300,8 @@
       const days = JP.daysBetween(t, c.due);
       status = `熟練度 ${boxDots(c.box)}　答對 ${c.ok} 次・答錯 ${c.ng} 次<br>${days <= 0 ? '現在可以複習' : `下次複習：${days} 天後`}`;
     }
-    const m = modal(`<div class="dsheet">${JP.cardOf(it)}<div class="ds-status">${status}</div></div>`, { sheet: true });
+    const m = modal(`<div class="dsheet">${JP.cardOf(it)}<div class="ds-status">${status}</div>${relatedHtml(it)}</div>`, { sheet: true });
+    m.el.addEventListener('click', (e) => { const b = e.target.closest('[data-rel]'); if (b) { m.close(); setTimeout(() => openWordSheet(b.dataset.rel), 160); } });
     if (S.set.auto && JP.tts.can()) setTimeout(() => JP.tts.speak(Q.sayOf(it)), 300);
     return m;
   }
@@ -321,6 +349,10 @@
         ${card('p-weak', '🎯', '弱點加強', '集中練習常常答錯的項目', weak ? `<b>${weak}</b>個弱點` : '<b>0</b>太強了', 'weak', !weak)}
         ${card('p-listen', '👂', '聽力特訓', listenOk ? '只聽聲音選答案，訓練耳朵' : '需要裝置有日語語音', `<b>${S.stats.listening}</b>累計答對`, 'listen', !learned || !listenOk)}
         ${card('p-blitz', '⚡', '閃電挑戰', '60 秒內盡量多答對，挑戰個人紀錄', `<b>${S.stats.blitz}</b>最佳紀錄`, 'blitz', learned < 6)}
+        ${card('p-quiz', '📝', '自訂測驗', '選範圍、題型、題數、生命與時間限制', '自由設定', 'quiz', false)}
+        ${card('p-cards', '🃏', '單字卡', '隨機翻卡瀏覽，查看例句與同主題單字', '不計分', 'cards', false)}
+        ${card('p-kana', 'あ', '五十音練習', '自選平／片假名與範圍，無限刷題', '不用解鎖', 'kana', false)}
+        ${card('p-phr', '💬', '情境會話', '日常會話與旅遊常用句，共 14 個情境、210 句', '有發音', 'phrases', false)}
         ${card('p-bank', '📚', '單字庫・N3', '約 2,000 個 N3 單字，沒有圖片，直接背', '<b>N3</b>開放', 'bank', false)}
         ${card('p-place', '🧭', '程度測驗', '12 題判斷你的程度，並調整起點', '2 分鐘', 'placement', false)}
       </div>
@@ -547,7 +579,8 @@
   /* ───────────── 路由與重繪 ───────────── */
   const ROUTES = { learn: viewLearn, dex: viewDex, practice: viewPractice, me: viewMe, bank: viewBank };
   let currentRoute = 'learn';
-  const tabOf = (r) => (r === 'bank' ? 'practice' : r);
+  const TABS = { bank: 'practice', quiz: 'practice', cards: 'practice', kana: 'practice', phrases: 'practice' };
+  const tabOf = (r) => TABS[r] || r;
   function route() {
     const name = (location.hash.replace(/^#\/?/, '').split('/')[0] || 'learn');
     currentRoute = ROUTES[name] ? name : 'learn';
@@ -585,7 +618,7 @@
         if (g === 'review' || g === 'weak' || g === 'listen') return launch(() => reviewConfig(g));
         if (g === 'blitz') return launch(blitzConfig);
         if (g === 'placement') return launch(placementConfig);
-        if (g === 'bank') { location.hash = '#/bank'; return; }
+        if (['bank', 'quiz', 'cards', 'kana', 'phrases'].includes(g)) { location.hash = '#/' + g; return; }
         return;
       }
       if ((el = t.closest('[data-dtab]'))) { dexState.tab = el.dataset.dtab; return viewDex(); }
@@ -638,5 +671,5 @@
       else if (currentRoute === 'learn' && !document.querySelector('.overlay.open')) { const b = main().querySelector('.map-col'); if (b) { const old = b.querySelector('.banner.warn'); const nb = voiceBanner(); if (old && !nb) old.remove(); else if (!old && nb) b.insertAdjacentHTML('afterbegin', nb); } } });
   }
 
-  JP.views = { route, refresh, updateChips, applyTheme, showWelcome, bind, launch };
+  JP.views = { route, refresh, updateChips, applyTheme, showWelcome, bind, launch, routes: ROUTES, openWordSheet };
 })();

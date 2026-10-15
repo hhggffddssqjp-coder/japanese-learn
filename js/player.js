@@ -102,6 +102,7 @@
       let ti = 0; // 教學卡索引
       let timer = 0;
       let nextTimer = 0;
+      let qTimer = 0;
       const teachIds = cfg.teachIds || [];
       const gen = cfg.gen || null;
 
@@ -115,6 +116,7 @@
 
       /* ----- 外框 ----- */
       root.className = `overlay open k-${cfg.kind}${world ? ' w-' + world.theme : ''}`;
+      if (cfg.sound) root.dataset.sound = cfg.sound;
       document.body.classList.add('noscroll');
       root.innerHTML = `<div class="play">
         <header class="play-top">
@@ -131,6 +133,7 @@
       function hud() {
         let h = '';
         if (cfg.timer) h += `<span class="hud-time">${Math.max(0, Math.ceil(st.timeLeft))}</span>`;
+        if (cfg.qtime) h += `<span class="hud-qt" id="qt">${cur && phase === 'ask' && cur.qleft != null ? Math.max(0, Math.ceil(cur.qleft)) : ''}</span>`;
         if (cfg.hearts) h += `<span class="hud-hearts">${Array.from({ length: cfg.hearts }, (_, i) => `<span class="${i < st.hearts ? 'on' : 'off'}">${ICON.heart()}</span>`).join('')}</span>`;
         if (cfg.timer || cfg.kind === 'blitz') h += `<span class="hud-score">${st.score}</span>`;
         if (st.combo >= 2) h += `<span class="hud-combo" title="連續答對">${ICON.flame()}<b>${st.combo}</b></span>`;
@@ -187,6 +190,17 @@
         pf.innerHTML = q.type === 'match' ? `<p class="foot-hint">點左邊，再點右邊的對應項目</p>` : `${skip}<button type="button" class="btn btn-big" data-act="check" id="go" disabled>確認</button>`;
         if (q.type === 'order') renderOrder();
         if (q.type === 'type') setTimeout(() => { const i = $('tin'); if (i) i.focus({ preventScroll: true }); }, 80);
+        root.dataset.phase = 'ask';
+        clearInterval(qTimer);
+        if (cfg.qtime && q.type !== 'match') {
+          cur.qleft = cfg.qtime;
+          qTimer = setInterval(() => {
+            if (phase !== 'ask' || !cur) return clearInterval(qTimer);
+            cur.qleft -= 0.25;
+            const e = $('qt'); if (e) { e.textContent = Math.max(0, Math.ceil(cur.qleft)); e.classList.toggle('low', cur.qleft <= 3); }
+            if (cur.qleft <= 0) { clearInterval(qTimer); check(true); }
+          }, 250);
+        }
         progress(); hud();
         root.querySelector('.play-scroll').scrollTop = 0;
         if (q.prompt && q.prompt.auto && Q.canListen()) setTimeout(() => { if (cur && cur.q === q && phase === 'ask') JP.tts.speak(q.prompt.say); }, 300);
@@ -220,6 +234,7 @@
         if (cfg.kind !== 'placement') {
           const ids = q.type === 'match' ? q.itemIds : q.itemId ? [q.itemId] : [];
           ids.forEach((id) => {
+            if (cfg.kind === 'quiz' && !S.cards[id]) return; // 自訂測驗不把沒學過的字加進圖鑑
             st.touched.add(id);
             if (q.type === 'match') { if (!st.srsDone.has(id)) { JP.review(id, !cur.wrongPairs.has(id)); st.srsDone.add(id); } }
             else if (!st.srsDone.has(id)) { JP.review(id, ok); st.srsDone.add(id); }
@@ -238,7 +253,7 @@
       }
 
       function requeue(q, ok) {
-        if (ok || q.retry || q.type === 'match' || cfg.kind === 'boss' || cfg.kind === 'testout' || cfg.kind === 'placement' || cfg.kind === 'blitz') return;
+        if (ok || q.retry || q.type === 'match' || cfg.kind === 'boss' || cfg.kind === 'testout' || cfg.kind === 'placement' || cfg.kind === 'blitz' || cfg.kind === 'quiz') return;
         let again = null;
         if (q.itemId) { const it = JP.item(q.itemId); again = Q.makeQ(it, 'easy', [q.sub]); }
         else { again = Object.assign({}, q, { choices: q.choices ? shuffle(q.choices) : q.choices, tiles: q.tiles ? shuffle(q.tiles) : q.tiles }); }
@@ -257,6 +272,8 @@
 
       function feedback(ok, q, skipped) {
         phase = 'checked';
+        clearInterval(qTimer);
+        root.dataset.phase = 'checked';
         const rv = revealFor(q);
         const praise = ['太棒了！', '答對了！', '漂亮！', '正確！', 'すごい！'];
         const cheer = st.combo >= 3 ? `<span class="combo-pop">${ICON.flame()}連擊 ×${st.combo}</span>` : '';
@@ -335,7 +352,7 @@
       function finish(natural) {
         if (st.over) return;
         st.over = true;
-        clearInterval(timer); clearTimeout(nextTimer);
+        clearInterval(timer); clearInterval(qTimer); clearTimeout(nextTimer);
         JP.tts.cancel();
         phase = 'result';
         const r = settle(st, cfg, natural);
@@ -370,6 +387,11 @@
               if (!S.stamps[cfg.node.world]) { S.stamps[cfg.node.world] = JP.dayKey(); r.stamp = world; }
               S.stats.lessons++;
             } else { r.pass = false; r.xp = Math.floor(st.xpLive / 2); }
+            break;
+          }
+          case 'quiz': {
+            r.xp = st.xpLive + (total >= 10 ? 5 : 0);
+            S.stats.reviews += total;
             break;
           }
           case 'review': case 'weak': case 'listen': {
@@ -417,9 +439,10 @@
           hero = win ? '🎉' : '👹';
           sub = win ? (r.kind === 'testout' ? '跳級成功！這個世界全部解鎖了' : '鬼關突破！') : '鬼還沒被打倒，再試一次吧';
         } else if (r.kind === 'blitz') { hero = '⚡'; sub = r.newBest ? '新紀錄！' : `個人最佳 ${r.best} 題`; }
+        else if (r.kind === 'quiz') { hero = r.acc >= 0.9 ? '🏆' : r.acc >= 0.7 ? '🎊' : '💪'; sub = r.acc >= 0.9 ? '幾乎全對！' : r.acc >= 0.7 ? '不錯喔！' : '多練幾次就會更穩'; }
         else if (r.kind === 'placement') { hero = '🧭'; sub = '程度測驗完成'; }
         else { hero = r.stars === 3 ? '🏆' : r.stars === 2 ? '🎊' : '👍'; sub = r.stars === 3 ? '完美表現！' : r.stars === 2 ? '做得很好！' : '完成了！再練幾次會更穩'; }
-        const title = r.kind === 'blitz' ? `${r.score} 題` : r.kind === 'placement' ? '' : win ? '關卡完成' : '挑戰失敗';
+        const title = r.kind === 'blitz' ? `${r.score} 題` : r.kind === 'quiz' ? `${r.correct} / ${r.total}` : r.kind === 'placement' ? '' : win ? '關卡完成' : '挑戰失敗';
         const placeInfo = r.kind === 'placement' ? placementText(r) : '';
         const tiles = [];
         if (r.kind === 'blitz') tiles.push(['答對', r.score]);
@@ -439,7 +462,7 @@
           <div class="res-tiles">${tiles.map(([k, v]) => `<div class="res-tile"><b>${v}</b><span>${k}</span></div>`).join('')}</div>
           ${lvl}${streak}${goal}${stamp}${nw}${ach}
         </div>`;
-        const again = (r.kind === 'blitz' || r.kind === 'review' || r.kind === 'weak' || r.kind === 'listen') ? `<button type="button" class="btn btn-ghost" data-act="again">再來一次</button>` : !win ? `<button type="button" class="btn btn-ghost" data-act="again">再挑戰</button>` : '';
+        const again = (r.kind === 'blitz' || r.kind === 'review' || r.kind === 'weak' || r.kind === 'listen' || r.kind === 'quiz') ? `<button type="button" class="btn btn-ghost" data-act="again">再來一次</button>` : !win ? `<button type="button" class="btn btn-ghost" data-act="again">再挑戰</button>` : '';
         pf.className = 'play-foot';
         pf.innerHTML = `${again}<button type="button" class="btn btn-big" data-act="exit" autofocus>${r.kind === 'placement' ? '開始冒險' : '繼續'}</button>`;
         $('pfill').style.width = '100%'; hud();
@@ -458,8 +481,9 @@
 
       /* ----- 關閉 ----- */
       function close(res) {
-        clearInterval(timer); clearTimeout(nextTimer);
+        clearInterval(timer); clearInterval(qTimer); clearTimeout(nextTimer);
         document.removeEventListener('keydown', onKey, true);
+        delete root.dataset.sound; delete root.dataset.phase;
         JP.tts.cancel(); JP.ui.stopConfetti();
         root.classList.remove('open');
         document.body.classList.remove('noscroll');

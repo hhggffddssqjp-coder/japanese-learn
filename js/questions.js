@@ -13,8 +13,14 @@
   const canListen = () => JP.tts.can();
 
   /* ───── 顯示輔助 ───── */
+  // 自訂測驗的「漢字顯示」：auto 依設定、kanji 只顯示漢字、kana 只顯示讀音（題目建立時決定）
   function jpHtml(it) {
-    if (it.kind === 'word' && it.hasKanji && S.set.furi) return `<ruby>${esc(it.jp)}<rt>${esc(it.rd)}</rt></ruby>`;
+    if (it.kind === 'word' && it.hasKanji) {
+      const d = (JP.Q && JP.Q.display) || 'auto';
+      if (d === 'kana') return esc(it.rd);
+      if (d === 'kanji') return esc(it.jp);
+      if (S.set.furi) return `<ruby>${esc(it.jp)}<rt>${esc(it.rd)}</rt></ruby>`;
+    }
     return esc(it.jp);
   }
   // 羅馬拼音輔助（題目中可由設定開關）
@@ -465,6 +471,28 @@
     return hira.concat(kata, n5, n4);
   }
 
+  // 情境會話的練習題：句子 → 中文、中文 → 句子、聽句子 → 中文、排列句子
+  function phraseQs(sc, n = 10) {
+    const mine = sc.phrases;
+    const pool = (JP.PHRASES || []).filter((x) => x.group === sc.group).flatMap((x) => x.phrases);
+    const others = (s, zh, key) => pickDistinct(shuffle(pool.filter((p) => p[1] !== zh && plain(p[0]) !== plain(s))), 3, (p) => p[key], [key === 1 ? zh : plain(s)]);
+    const base = (p) => ({ type: 'choice', itemId: null, d: 1, layout: 'list', reveal: { html: `<div class="rv-sent">${ruby(p[0])}${sentR(p[0])}</div><div class="rv-zh">${esc(p[1])}</div>${p[2] ? `<div class="rv-note">${esc(p[2])}</div>` : ''}` } });
+    const makers = [
+      (p) => Object.assign(base(p), { sub: 'sent2zh', title: '這句話是什麼意思？', prompt: { html: ruby(p[0]) + sentR(p[0]), say: plain(p[0]), sentence: true }, choices: shuffle([p].concat(others(p[0], p[1], 1))).map((o) => ({ html: esc(o[1]), correct: o === p, key: o[1] })) }),
+      (p) => Object.assign(base(p), { sub: 'zh2sent', title: '哪一句日文的意思是這個？', prompt: { zh: p[1] }, choices: shuffle([p].concat(others(p[0], p[1], 0).length ? others(p[0], p[1], 0) : [])).map((o) => ({ html: ruby(o[0]) + sentR(o[0]), correct: o === p, key: plain(o[0]) })) }),
+      (p) => (canListen() ? Object.assign(base(p), { sub: 'listen2zh', listening: true, title: '聽聽看，這句話是什麼意思？', prompt: { say: plain(p[0]), listen: true, auto: true }, choices: shuffle([p].concat(others(p[0], p[1], 1))).map((o) => ({ html: esc(o[1]), correct: o === p, key: o[1] })) }) : null),
+      (p) => { const q = orderQ(p[0], p[1], null, 1); if (q) q.reveal.html += p[2] ? `<div class="rv-note">${esc(p[2])}</div>` : ''; return q; },
+    ];
+    const qs = [];
+    const order = shuffle(mine.slice());
+    for (let i = 0; qs.length < n && i < order.length * 3; i++) {
+      const p = order[i % order.length];
+      for (const mk2 of shuffle(makers.slice())) { const q = mk2(p); if (q && (q.type !== 'choice' || q.choices.length >= 3)) { qs.push(q); break; } }
+    }
+    spread(qs);
+    return qs;
+  }
+
   // 「認識日語文字」關卡的小測驗
   function infoQuiz() {
     const mk2 = (title, ans, wrong, why) => ({
@@ -480,5 +508,5 @@
     ]);
   }
 
-  JP.Q = { infoQuiz, jpHtml, jpR, sentR, roSmall, exampleHtml, sayOf, makeQ, planLesson, planReview, planBoss, planPlacement, endless, grammarQs, matchQ, canListen, build, B, register(items) { items.forEach((it) => { wordsAll.push(it); bankAll.push(it); }); } };
+  JP.Q = { infoQuiz, jpHtml, jpR, sentR, roSmall, exampleHtml, sayOf, makeQ, planLesson, planReview, planBoss, planPlacement, endless, grammarQs, matchQ, canListen, build, B, phraseQs, register(items) { items.forEach((it) => { wordsAll.push(it); bankAll.push(it); }); } };
 })();

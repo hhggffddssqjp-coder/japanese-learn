@@ -18,7 +18,7 @@ globalThis.document = { addEventListener() {}, getElementById() { return null; }
 const jsDir = path.join(ROOT, 'js');
 const load = (f) => require(path.join(jsDir, f + '.js'));
 const extra = (re) => fs.readdirSync(jsDir).filter((f) => re.test(f)).map((f) => f.replace(/\.js$/, '')).sort();
-['data-kana', 'data-words', 'data-words-extra', ...extra(/^data-words-(?!extra)/), 'data-word-levels', 'data-grammar', ...extra(/^data-grammar-/), 'core', 'curriculum', 'achievements'].forEach(load);
+['data-kana', 'data-words', 'data-words-extra', ...extra(/^data-words-(?!extra)/), 'data-word-levels', 'data-grammar', ...extra(/^data-grammar-/), ...extra(/^data-phrases-/), 'core', 'curriculum', 'achievements'].forEach(load);
 const JP = window.JP;
 let listening = true;
 JP.tts = { ok: true, hasJa: true, can: () => listening, list: () => [], current: () => null, cancel() {}, speak() {} };
@@ -97,6 +97,11 @@ for (const mode of [true, false]) {
       }
     }
   });
+}
+
+// 情境會話練習題
+for (const sc of JP.PHRASES || []) {
+  for (let k = 0; k < 5; k++) { Q.phraseQs(sc, 10).forEach((q) => check(q, `情境 ${sc.id}`)); }
 }
 
 const nWords = JP.itemList('word').length;

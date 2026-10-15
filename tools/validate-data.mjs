@@ -12,6 +12,7 @@ vm.createContext(sandbox);
 const jsDir = path.join(ROOT, 'js');
 const files = ['data-kana', 'data-words', 'data-words-extra']
   .concat(fs.readdirSync(jsDir).filter((f) => /^data-words-.+\.js$/.test(f) && f !== 'data-words-extra.js').map((f) => f.replace(/\.js$/, '')).sort())
+  .concat(fs.readdirSync(jsDir).filter((f) => /^data-phrases-.+\.js$/.test(f)).map((f) => f.replace(/\.js$/, '')).sort())
   .concat(['data-grammar'])
   .concat(fs.readdirSync(jsDir).filter((f) => /^data-grammar-.+\.js$/.test(f)).map((f) => f.replace(/\.js$/, '')).sort());
 for (const f of files) vm.runInContext(fs.readFileSync(path.join(jsDir, f + '.js'), 'utf8'), sandbox, { filename: f });
@@ -89,7 +90,23 @@ JP.GRAMMAR.forEach((g) => {
   });
 });
 
+// ── 情境會話
+const seenSc = new Set(), seenPhrase = new Set();
+(JP.PHRASES || []).forEach((sc) => {
+  if (seenSc.has(sc.id)) bad(`情境 id 重複：${sc.id}`);
+  seenSc.add(sc.id);
+  ['group', 'title', 'zh', 'em'].forEach((k) => { if (!sc[k]) bad(`情境 ${sc.id}: 缺 ${k}`); });
+  if (sc.phrases.length !== 15) bad(`情境 ${sc.id}: 句子數 ${sc.phrases.length}（需 15）`);
+  sc.phrases.forEach(([s, zh, note], i) => {
+    const where = `情境 ${sc.id} 句${i + 1}`;
+    sentCheck(where, s, zh, { minTok: 2, maxTok: 16 });
+    if (note !== undefined && typeof note !== 'string') bad(`${where}: 備註需為字串`);
+    if (seenPhrase.has(plain(s))) bad(`${where}: 句子重複 ${plain(s)}`);
+    seenPhrase.add(plain(s));
+  });
+});
+
 const nW = JP.LESSONS.reduce((a, l) => a + l.words.length, 0);
-console.log(`課程 ${JP.LESSONS.length}、單字 ${nW}、文法 ${JP.GRAMMAR.length}`);
+console.log(`課程 ${JP.LESSONS.length}、單字 ${nW}、文法 ${JP.GRAMMAR.length}、情境 ${(JP.PHRASES || []).length}`);
 if (problems.length) { console.log(`發現 ${problems.length} 個問題：`); problems.forEach((p) => console.log(' -', p)); process.exit(1); }
 console.log('檢查通過 ✓');

@@ -38,7 +38,7 @@ function loadData() {
   sandbox.window.window = sandbox.window;
   vm.createContext(sandbox);
   const banks = fs.readdirSync(path.join(ROOT, 'js')).filter((f) => /^bank-.+\.js$/.test(f)).map((f) => f.replace(/\.js$/, '')).sort();
-  for (const f of ['data-kana', 'data-words', 'data-words-extra', 'data-words-n4a', 'data-words-n4b', 'data-grammar', 'data-grammar-n4', ...banks]) {
+  for (const f of ['data-kana', 'data-words', 'data-words-extra', 'data-words-n4a', 'data-words-n4b', 'data-grammar', 'data-grammar-n4', 'data-phrases-daily', 'data-phrases-travel', ...banks]) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f + '.js'), 'utf8'), sandbox, { filename: f });
   }
   return sandbox.window.JP;
@@ -54,6 +54,8 @@ function collectTexts() {
   JP.LESSONS.forEach((l) => l.words.forEach(([jp, rd, , , ex, , , ex2]) => { set.add(rd || jp); if (ex) set.add(plain(ex)); if (ex2) set.add(plain(ex2)); }));
   // 單字庫：讀音與例句
   Object.values(JP.BANK || {}).forEach((rows) => rows.forEach(([jp, rd, , , ex]) => { set.add(rd || jp); if (ex) set.add(plain(ex)); }));
+  // 情境會話
+  (JP.PHRASES || []).forEach((sc) => sc.phrases.forEach(([s]) => set.add(plain(s))));
   JP.GRAMMAR.forEach((g) => {
     g.examples.forEach(([s]) => set.add(plain(s)));
     g.quiz.forEach(([stem, ans]) => set.add(stem.replace(/（.*?）\s*$/, '').replace(/＿+/g, ans)));
