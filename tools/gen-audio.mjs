@@ -58,7 +58,7 @@ function collectTexts() {
   (JP.PHRASES || []).forEach((sc) => sc.phrases.forEach(([s]) => set.add(plain(s))));
   JP.GRAMMAR.forEach((g) => {
     g.examples.forEach(([s]) => set.add(plain(s)));
-    g.quiz.forEach(([stem, ans]) => set.add(stem.replace(/（.*?）\s*$/, '').replace(/＿+/g, ans)));
+    g.quiz.forEach(([stem, ans]) => set.add(plain(stem.replace(/（.*?）\s*$/, '')).replace(/＿+/g, ans)));
   });
   set.add('こんにちは。にほんごを べんきょう しましょう。');
   return Array.from(set).filter(Boolean).sort();
@@ -128,4 +128,8 @@ async function main() {
   const bytes = fs.readdirSync(OUT).reduce((s, x) => s + fs.statSync(path.join(OUT, x)).size, 0);
   console.log(`完成：新增 ${todo.length} 個、移除 ${removed} 個舊檔，audio/ 共 ${(bytes / 1048576).toFixed(1)} MB`);
 }
-main().catch((e) => { console.error('錯誤：' + e.message); process.exit(1); });
+export { collectTexts };
+// 只有直接執行這個檔案時才產生音檔（tools/check-audio.mjs 會 import collectTexts）
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((e) => { console.error('錯誤：' + e.message); process.exit(1); });
+}

@@ -89,13 +89,16 @@
     const s = out.join(' ');
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
-  // 輸入比對：忽略大小寫、空白、長音差異與訓令式寫法
+  // 輸入比對：忽略大小寫、空白，接受訓令式／平文式與各種長音寫法（ō／oo／ou／oh 視為相同），但不能省略長音
+  // （長音會改變意思：高校 koukou 和 ここ koko 不同；おばあさん 和 おばさん 不同）
   function normRo(s) {
     s = String(s).toLowerCase().replace(/[\s'’\-·・]/g, '');
-    s = s.replace(/ā/g, 'a').replace(/ī/g, 'i').replace(/ū/g, 'u').replace(/ē/g, 'e').replace(/ō/g, 'o');
-    const map = [['sya', 'sha'], ['syu', 'shu'], ['syo', 'sho'], ['tya', 'cha'], ['tyu', 'chu'], ['tyo', 'cho'], ['zya', 'ja'], ['zyu', 'ju'], ['zyo', 'jo'], ['dya', 'ja'], ['dyu', 'ju'], ['dyo', 'jo'], ['jya', 'ja'], ['jyu', 'ju'], ['jyo', 'jo'], ['si', 'shi'], ['ti', 'chi'], ['tu', 'tsu'], ['hu', 'fu'], ['zi', 'ji'], ['di', 'ji'], ['du', 'zu']];
+    s = s.replace(/ā/g, 'aa').replace(/ī/g, 'ii').replace(/ū/g, 'uu').replace(/ē/g, 'ee').replace(/ō/g, 'ou')
+      .replace(/[âîûêô]/g, (c) => ({ â: 'aa', î: 'ii', û: 'uu', ê: 'ee', ô: 'ou' }[c]));
+    const map = [['sya', 'sha'], ['syu', 'shu'], ['syo', 'sho'], ['tya', 'cha'], ['tyu', 'chu'], ['tyo', 'cho'], ['zya', 'ja'], ['zyu', 'ju'], ['zyo', 'jo'], ['dya', 'ja'], ['dyu', 'ju'], ['dyo', 'jo'], ['jya', 'ja'], ['jyu', 'ju'], ['jyo', 'jo'], ['si', 'shi'], ['ti', 'chi'], ['tu', 'tsu'], ['zi', 'ji'], ['di', 'ji'], ['du', 'zu']];
     map.forEach(([a, b]) => { s = s.split(a).join(b); });
-    s = s.replace(/ou/g, 'o').replace(/([aeiou])\1+/g, '$1');
+    s = s.replace(/(^|[^sc])hu/g, '$1fu');
+    s = s.replace(/oo/g, 'ou').replace(/oh(?![aeiou])/g, 'ou');
     return s;
   }
 
@@ -110,15 +113,50 @@
     ach: {}, stamps: {},
     set: { sound: true, haptic: true, voice: '', slow: false, auto: true, romaji: true, romajiQ: true, hq: true, furi: true, theme: 'auto' },
   });
+  /* 讀進來的進度（本機、匯入檔、雲端）一律先「清洗」：欄位型別不對的丟掉、數值限制範圍，
+     避免匯入惡意或壞掉的檔案時把 HTML 塞進畫面，或讓頁面因為型別錯誤打不開。 */
+  const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+  const numOr = (v, d, lo = 0, hi = 1e12) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+  const dayOr = (v, d) => (typeof v === 'string' && DAY_RE.test(v) ? v : d);
+  function sanitizeState(o) {
+    const out = defaults();
+    if (!isObj(o)) return out;
+    out.xp = numOr(o.xp, 0); out.streak = numOr(o.streak, 0); out.bestStreak = numOr(o.bestStreak, 0);
+    out.freezes = numOr(o.freezes, 1, 0, 2); out.unlocked = numOr(o.unlocked, 0, 0, 100000); out.cv = numOr(o.cv, 0, 0, 1000);
+    out.mt = numOr(o.mt, 0); out.resetAt = numOr(o.resetAt, 0);
+    out.goal = [30, 50, 100].includes(o.goal) ? o.goal : 50;
+    out.onboarded = !!o.onboarded;
+    out.lastDay = dayOr(o.lastDay, null);
+    out.frozen = Array.isArray(o.frozen) ? o.frozen.filter((k) => dayOr(k, null)).slice(-30) : [];
+    Object.entries(isObj(o.days) ? o.days : {}).forEach(([k, v]) => { if (DAY_RE.test(k)) out.days[k] = numOr(v, 0, 0, 1e7); });
+    const today = dayKey();
+    Object.entries(isObj(o.cards) ? o.cards : {}).forEach(([id, c]) => {
+      if (!isObj(c) || id.length > 80) return;
+      out.cards[id] = { box: numOr(c.box, 0, 0, 7), seen: numOr(c.seen, 0), ok: numOr(c.ok, 0), ng: numOr(c.ng, 0), lapses: numOr(c.lapses, 0), due: dayOr(c.due, today), first: dayOr(c.first, today) };
+    });
+    Object.entries(isObj(o.nodes) ? o.nodes : {}).forEach(([id, p]) => {
+      if (!isObj(p) || id.length > 80) return;
+      out.nodes[id] = { stars: numOr(p.stars, 0, 0, 3), plays: numOr(p.plays, 0) };
+      if (p.skipped) out.nodes[id].skipped = true;
+    });
+    const stamps = (src) => { const r = {}; Object.entries(isObj(src) ? src : {}).forEach(([k, v]) => { if (k.length <= 40 && (v === true || dayOr(v, null))) r[k] = v; }); return r; };
+    out.ach = stamps(o.ach); out.stamps = stamps(o.stamps);
+    const st = isObj(o.stats) ? o.stats : {};
+    Object.keys(out.stats).forEach((k) => { out.stats[k] = numOr(st[k], 0); });
+    const s = isObj(o.set) ? o.set : {};
+    Object.keys(out.set).forEach((k) => { if (typeof out.set[k] === 'boolean' && typeof s[k] === 'boolean') out.set[k] = s[k]; });
+    out.set.theme = ['auto', 'light', 'dark'].includes(s.theme) ? s.theme : 'auto';
+    out.set.voice = typeof s.voice === 'string' ? s.voice.slice(0, 200) : '';
+    if (typeof o.uid === 'string' && o.uid.length <= 128) out.uid = o.uid;
+    return out;
+  }
   function loadState() {
-    const d = defaults();
+    let d = defaults();
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
-        const o = JSON.parse(raw);
-        Object.assign(d, o);
-        d.set = Object.assign(defaults().set, o.set || {});
-        d.stats = Object.assign(defaults().stats, o.stats || {});
+        d = sanitizeState(JSON.parse(raw));
       } else {
         // 從舊版（v1）帶入經驗值與連續天數
         const old = JSON.parse(localStorage.getItem('jpl.v1') || 'null');
@@ -133,6 +171,8 @@
   }
   const S = loadState();
   JP.S = S;
+  // 換掉整份進度（匯入、同步、清除、其他分頁更新）：保留同一個物件，其他模組拿著的參照才不會失效
+  function replaceState(next) { Object.keys(S).forEach((k) => delete S[k]); Object.assign(S, sanitizeState(next)); }
   let saveTimer = 0;
   function save(opt) {
     S.mt = Date.now();
@@ -141,6 +181,18 @@
   }
   function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); }
   window.addEventListener('pagehide', () => save({ noSync: true }));
+  // 另一個分頁存了進度：合併進來，避免後存的分頁蓋掉先存的
+  window.addEventListener('storage', (e) => {
+    if (e.key !== KEY || !e.newValue) return;
+    try {
+      const other = sanitizeState(JSON.parse(e.newValue));
+      const mine = JSON.parse(JSON.stringify(S));
+      // 對方比較新的重置，直接採用；否則合併
+      const merged = JP.sync && JP.sync.mergeState ? JP.sync.mergeState(mine, other) : other;
+      replaceState(merged);
+      if (JP.views && !document.querySelector('.overlay.open')) { JP.views.applyTheme(); JP.views.refresh(); }
+    } catch (err) { /* 略過 */ }
+  });
 
   /* ───────────── 等級、經驗值、連勝 ───────────── */
   const needFor = (lv) => 100 + 25 * (lv - 1);
@@ -228,10 +280,11 @@
     saveSoon();
     return c;
   }
-  function seed(id, box = 2) {
+  // 跳級時把「已會」的項目放進複習：熟練度設高一點、到期日分散在 3～30 天內，避免一次冒出幾百個待複習
+  function seed(id, box = 4) {
     if (S.cards[id]) return;
     const today = dayKey();
-    S.cards[id] = { box, due: addDays(today, 1 + Math.floor(Math.random() * 4)), seen: 1, ok: 1, ng: 0, lapses: 0, first: today };
+    S.cards[id] = { box, due: addDays(today, 3 + Math.floor(Math.random() * 28)), seen: 1, ok: 1, ng: 0, lapses: 0, first: today };
   }
   const dueIds = () => { const t = dayKey(); return Object.keys(S.cards).filter((id) => S.cards[id].due <= t && JP.ITEMS.has(id)); };
   const weakIds = () => Object.keys(S.cards).filter((id) => { const c = S.cards[id]; return JP.ITEMS.has(id) && (c.ng > c.ok || (c.lapses >= 2 && c.box <= 3)); });
@@ -331,15 +384,21 @@
       const a = audioEl();
       let done = false;
       const fin = (r) => { if (!done) { done = true; a.onended = a.onerror = null; resolve(r); } };
-      a.onended = () => fin(true);
-      a.onerror = () => fin(false);
-      try {
-        if (hasTTS) speechSynthesis.cancel();
-        a.src = 'audio/' + file;
+      // 用 fetch 取得完整檔案再播：Service Worker 看到的是一般請求（沒有 Range），離線快取才能運作
+      let url = '';
+      const cleanup = () => { if (url) { URL.revokeObjectURL(url); url = ''; } };
+      const end = (r) => { cleanup(); fin(r); };
+      a.onended = () => end(true);
+      a.onerror = () => end(false);
+      try { if (hasTTS) speechSynthesis.cancel(); } catch (e) { /* 略過 */ }
+      fetch('audio/' + file).then((r) => (r.ok ? r.blob() : Promise.reject(new Error('audio ' + r.status)))).then((blob) => {
+        if (done) return;
+        url = URL.createObjectURL(blob);
+        a.src = url;
         const pr = a.play();
-        if (pr && pr.catch) pr.catch(() => fin(false));
-      } catch (e) { fin(false); }
-      setTimeout(() => fin(false), 12000);
+        if (pr && pr.catch) pr.catch(() => end(false));
+      }).catch(() => end(false));
+      setTimeout(() => end(false), 12000);
     });
   }
   if (hasTTS) {
@@ -390,7 +449,7 @@
   Object.assign(JP, {
     esc, shuffle, sample, pick, clamp, dayKey, addDays, daysBetween, parseDay,
     ruby, plain, reading, tokensOf, toRomaji, normRo, toHira, tokRo, sentRo,
-    save, saveSoon, defaults, levelInfo, xpAt, needFor, rankOf, RANKS,
+    save, saveSoon, defaults, sanitizeState, replaceState, levelInfo, xpAt, needFor, rankOf, RANKS,
     dailyXP, streakAlive, streakDisplay, doneToday, addXP,
     review, seed, card, dueIds, weakIds, learnedIds, INTERVALS, MAX_BOX,
   });

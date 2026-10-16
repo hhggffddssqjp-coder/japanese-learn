@@ -11,6 +11,9 @@
   /* ───── 合併規則（純函式，方便測試） ───── */
   const num = (x) => (typeof x === 'number' && isFinite(x) ? x : 0);
   function mergeState(a, b) {
+    // 「清除進度」會記下 resetAt：重置時間較晚的一方整份勝出，避免另一台裝置的舊進度把清除的結果還原
+    const ra = num(a.resetAt), rb = num(b.resetAt);
+    if (ra !== rb) return JSON.parse(JSON.stringify(ra > rb ? a : b));
     const newer = num(a.mt) >= num(b.mt) ? a : b;
     const out = JSON.parse(JSON.stringify(newer));
     out.xp = Math.max(num(a.xp), num(b.xp));
@@ -43,6 +46,9 @@
     Object.keys(out.ach).forEach((k) => { const x = (a.ach || {})[k], y = (b.ach || {})[k]; if (x && y) out.ach[k] = x < y ? x : y; });
     out.stamps = Object.assign({}, b.stamps || {}, a.stamps || {});
     out.cv = Math.max(num(a.cv), num(b.cv));
+    out.resetAt = ra;
+    out.uid = a.uid || b.uid || undefined;
+    if (out.uid === undefined) delete out.uid;
     return out;
   }
 
@@ -63,21 +69,37 @@
     el.src = src; el.onload = res; el.onerror = () => rej(new Error('load ' + src));
     document.head.appendChild(el);
   });
-  async function init() {
+  // 登入過的人才會在開頁時載入 Firebase SDK（數百 KB）；沒登入過的人按「登入」時才載入
+  const FLAG = 'jpl.signedIn';
+  const flag = (v) => { try { if (v) localStorage.setItem(FLAG, '1'); else localStorage.removeItem(FLAG); } catch (e) { /* 略過 */ } };
+  const hasFlag = () => { try { return localStorage.getItem(FLAG) === '1'; } catch (e) { return false; } };
+  let initP = null;
+  function init() {
+    if (initP) return initP;
     set('loading');
-    try {
-      if (!window.firebase) for (const src of FB_SCRIPTS) await loadScript(src);
-      window.firebase.initializeApp(cfg);
-      auth = window.firebase.auth();
-      db = window.firebase.firestore();
-      auth.onAuthStateChanged(async (u) => {
-        sync.user = u ? { uid: u.uid, name: u.displayName || '', email: u.email || '', photo: u.photoURL || '' } : null;
-        sync.ready = true;
-        if (u) { set('syncing'); await pull(true); } else set('signedout');
-      });
-    } catch (e) {
-      set('error', navigator.onLine ? '無法載入雲端同步（請稍後再試）' : '目前離線，恢復連線後會再同步');
-    }
+    initP = (async () => {
+      try {
+        if (!window.firebase) for (const src of FB_SCRIPTS) await loadScript(src);
+        window.firebase.initializeApp(cfg);
+        auth = window.firebase.auth();
+        db = window.firebase.firestore();
+        auth.onAuthStateChanged(async (u) => {
+          sync.user = u ? { uid: u.uid, name: u.displayName || '', email: u.email || '', photo: u.photoURL || '' } : null;
+          sync.ready = true;
+          if (u) {
+            flag(true);
+            // 這台裝置上的進度屬於別的帳號：不合併，避免兩個人的進度混在一起
+            if (S.uid && S.uid !== u.uid) { JP.replaceState(JP.defaults()); JP.save({ noSync: true }); if (JP.views) { JP.views.applyTheme(); JP.views.refresh(); } }
+            S.uid = u.uid;
+            set('syncing'); await pull(true);
+          } else { flag(false); set('signedout'); }
+        });
+      } catch (e) {
+        initP = null;
+        set('error', navigator.onLine ? '無法載入雲端同步（請稍後再試）' : '目前離線，恢復連線後會再同步');
+      }
+    })();
+    return initP;
   }
 
   const docRef = () => db.collection('users').doc(sync.user.uid);
@@ -92,11 +114,9 @@
 
   function applyToLocal(merged) {
     const voice = S.set && S.set.voice;
-    Object.keys(S).forEach((k) => delete S[k]);
-    Object.assign(S, JP.defaults(), merged);
-    S.set = Object.assign(JP.defaults().set, merged.set || {});
-    S.stats = Object.assign(JP.defaults().stats, merged.stats || {});
+    JP.replaceState(merged);
     if (voice !== undefined) S.set.voice = voice; // 語音是裝置專屬設定
+    if (sync.user) S.uid = sync.user.uid;
   }
 
   // 從雲端取回並合併
@@ -106,7 +126,7 @@
     try {
       const snap = await docRef().get();
       if (snap.exists) {
-        const remote = JSON.parse(snap.data().state || '{}');
+        const remote = JP.sanitizeState(JSON.parse(snap.data().state || '{}'));
         if (remote && typeof remote === 'object' && remote.cards) {
           const merged = mergeState(JSON.parse(JSON.stringify(S)), remote);
           applyToLocal(merged);
@@ -120,15 +140,29 @@
     } catch (e) { set('error', friendly(e)); }
   }
 
+  const MAX_STATE = 850000; // Firestore 單一文件上限約 1MB，留一點空間
   async function push() {
+    pushTimer = 0;
     if (!sync.user) return;
     if (pushing) { pendingPush = true; return; }
     pushing = true;
     try {
-      await docRef().set({ state: JSON.stringify(S), mt: S.mt || Date.now(), v: 1, updated: Date.now() });
+      if (JSON.stringify(S).length > MAX_STATE) throw Object.assign(new Error('too big'), { code: 'state-too-big' });
+      // 先讀雲端、合併、再寫回：兩台裝置同時使用時，不會用舊進度蓋掉另一台的進度
+      let merged = null;
+      await db.runTransaction(async (tx) => {
+        const ref = docRef();
+        const snap = await tx.get(ref);
+        const local = JSON.parse(JSON.stringify(S));
+        const remote = snap.exists ? JP.sanitizeState(JSON.parse(snap.data().state || '{}')) : null;
+        merged = remote && remote.cards ? mergeState(local, remote) : local;
+        merged.uid = sync.user.uid;
+        tx.set(ref, { state: JSON.stringify(merged), mt: merged.mt || Date.now(), v: 1, updated: Date.now() });
+      });
+      if (merged) { applyToLocal(merged); JP.save({ noSync: true }); }
       sync.last = Date.now();
       set('idle');
-    } catch (e) { set('error', friendly(e)); }
+    } catch (e) { set('error', e && e.code === 'state-too-big' ? '進度資料太大，無法同步到雲端，請先匯出備份並回報問題' : friendly(e)); }
     pushing = false;
     if (pendingPush) { pendingPush = false; schedulePush(); }
   }
@@ -139,7 +173,7 @@
   }
 
   sync.signIn = async () => {
-    if (!auth) return;
+    if (!auth) { await init(); if (!auth) return; }
     try {
       set('syncing');
       await auth.signInWithPopup(new window.firebase.auth.GoogleAuthProvider());
@@ -148,10 +182,19 @@
       set('error', friendly(e));
     }
   };
-  sync.signOut = async () => { if (auth) { await auth.signOut(); } };
+  sync.signOut = async () => { if (auth) { await auth.signOut(); } flag(false); };
+  sync.flush = () => push();
   sync.now = async () => { if (!sync.user) return; set('syncing'); await pull(true); };
   // 清除進度時一併清掉雲端，避免被舊資料還原
-  sync.wipe = async () => { if (!sync.user) return; try { await docRef().delete(); } catch (e) { /* 忽略 */ } };
+  // 寫入「已重置」的空進度（帶 resetAt），其他裝置同步時會整份採用它，不會把舊進度推回來；回傳是否成功
+  sync.wipe = async (ts) => {
+    if (!sync.user) return true;
+    try {
+      const fresh = JP.defaults(); fresh.resetAt = ts || Date.now(); fresh.mt = fresh.resetAt; fresh.uid = sync.user.uid;
+      await docRef().set({ state: JSON.stringify(fresh), mt: fresh.mt, v: 1, updated: Date.now() });
+      return true;
+    } catch (e) { set('error', friendly(e)); return false; }
+  };
 
   JP.on('saved', (opt) => { if (!(opt && opt.noSync)) schedulePush(); });
   document.addEventListener('visibilitychange', () => {
@@ -160,5 +203,5 @@
   });
   window.addEventListener('online', () => { if (sync.user) pull(true); });
 
-  init();
+  if (hasFlag()) init(); else { sync.ready = true; set('signedout'); }
 })();

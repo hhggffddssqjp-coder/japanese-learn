@@ -23,6 +23,7 @@ const JP = window.JP;
 let listening = true;
 JP.tts = { ok: true, hasJa: true, can: () => listening, list: () => [], current: () => null, cancel() {}, speak() {} };
 JP.ui = { speakBtn: () => '', ICON: {} };
+load('sync'); // 只用到合併規則（沒有設定 Firebase 時不會啟動雲端）
 load('questions');
 load('bank');
 const bankLevels = fs.readdirSync(jsDir).filter((f) => /^bank-.+\.js$/.test(f)).map((f) => f.replace(/^bank-|\.js$/g, ''));
@@ -97,6 +98,29 @@ for (const mode of [true, false]) {
       }
     }
   });
+}
+
+// 進度資料：清洗與合併
+{
+  const evil = { xp: 5, cards: { 'w:猫': { box: 99, due: 123, seen: 'x' }, bad: 5 }, goal: '<img src=x onerror=alert(1)>', frozen: 'abc', days: { '2026-01-01': 3, '<b>': 9 }, freezes: 99,
+    set: { theme: '<script>', sound: 'yes', voice: 'x'.repeat(500) }, ach: { a: '<b>', b: '2026-01-02' }, nodes: { n: { stars: 9, plays: 'a' } }, uid: 'u1', extra: 'drop me' };
+  const c = JP.sanitizeState(evil);
+  if (c.goal !== 50 || !Array.isArray(c.frozen) || c.frozen.length || c.freezes !== 2 || c.set.theme !== 'auto' || c.set.sound !== true || c.set.voice.length > 200) bad('sanitizeState: 欄位沒有被清洗');
+  if (c.cards['w:猫'].box !== 7 || !/^\d{4}-\d{2}-\d{2}$/.test(c.cards['w:猫'].due) || c.cards.bad || c.days['<b>'] || c.ach.a || c.ach.b !== '2026-01-02' || c.nodes.n.stars !== 3 || c.extra || c.uid !== 'u1') bad('sanitizeState: cards／days／ach／nodes 沒有被清洗');
+  if (JP.sanitizeState(null).xp !== 0 || JP.sanitizeState('x').cards === undefined) bad('sanitizeState: 非物件輸入要回傳預設值');
+  const m = JP.sync.mergeState;
+  const A = JP.sanitizeState({ xp: 100, mt: 5, cards: { 'w:a': { box: 2, seen: 3, due: '2026-01-01', first: '2026-01-01' } }, uid: 'u1' });
+  const B = JP.sanitizeState({ xp: 50, mt: 9, cards: { 'w:b': { box: 1, seen: 1, due: '2026-01-02', first: '2026-01-02' } }, uid: 'u1' });
+  const M = m(A, B);
+  if (M.xp !== 100 || !M.cards['w:a'] || !M.cards['w:b'] || M.uid !== 'u1') bad('mergeState: 兩邊的進度要取聯集／較大值');
+  const R = JP.sanitizeState({ xp: 0, mt: 20, resetAt: 20 });
+  const MR = m(A, R);
+  if (MR.xp !== 0 || Object.keys(MR.cards).length) bad('mergeState: 重置時間較晚的一方要整份勝出（不能把舊進度併回去）');
+}
+// 輸入比對：接受各種長音寫法，但不能省略長音
+{
+  const eq = (a, b) => JP.normRo(a) === JP.normRo(b);
+  if (!eq('koukou', 'kōkō') || !eq('koukou', 'kookoo') || eq('koukou', 'koko') || eq('obaasan', 'obasan') || !eq('shi', 'si') || !eq('fuji', 'huji')) bad('normRo: 長音或訓令式比對不正確');
 }
 
 // 情境會話練習題

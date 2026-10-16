@@ -27,10 +27,10 @@
 
   /* ───── 提示訊息 ───── */
   let toastTimer = 0;
-  function toast(msg, ms = 2400) {
+  function toast(msg, ms = 2400, opt) {
     const el = document.getElementById('toast');
     if (!el) return;
-    el.innerHTML = msg;
+    if (opt && opt.html) el.innerHTML = msg; else el.textContent = msg; // 預設純文字，避免被塞入 HTML
     el.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), ms);

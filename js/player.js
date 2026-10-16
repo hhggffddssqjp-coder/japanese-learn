@@ -149,7 +149,7 @@
 
       /* ----- 教學階段 ----- */
       const items = teachIds.map(JP.item).filter(Boolean);
-      const useGrid = items.length >= 8;
+      const useGrid = items.length >= 8 && items.every((i) => i.kind === 'kana'); // 單字要一張一張看（有中文與例句），只有假名用格狀
       function renderTeach() {
         phase = 'teach';
         if (pages) {
@@ -217,11 +217,11 @@
         const q = cur.q;
         if (q.type === 'choice') return cur.sel != null && !!q.choices[cur.sel].correct;
         if (q.type === 'order') return cur.placed.map((t) => plain(t.t)).join('|') === q.answer.join('|');
-        if (q.type === 'type') { const v = ($('tin').value || '').trim(); return v !== '' && normRo(v) === normRo(q.accept); }
+        if (q.type === 'type') { const v = ($('tin').value || '').trim(); return v !== '' && [].concat(q.accept).some((a) => normRo(v) === normRo(a)); }
         return false;
       }
 
-      function record(ok, q, skipped) {
+      function record(ok, q, skipped, noHeart) {
         const first = !(q.retry);
         st.answeredN++;
         S.stats.answered++;
@@ -238,7 +238,7 @@
             st.touched.add(id);
             if (q.type === 'match') { if (!st.srsDone.has(id)) { JP.review(id, !cur.wrongPairs.has(id)); st.srsDone.add(id); } }
             else if (!st.srsDone.has(id)) { JP.review(id, ok); st.srsDone.add(id); }
-            else if (ok) { const c = JP.card(id); if (c) { c.ok++; } }
+            else if (ok && !q.retry) { const c = JP.card(id); if (c) { c.ok++; } } // 重做題答對不再累計，否則「錯的字」很快就不算弱點
           });
         }
         if (ok) {
@@ -247,7 +247,7 @@
           st.score++;
         } else {
           st.combo = 0;
-          if (cfg.hearts) st.hearts--;
+          if (cfg.hearts && !noHeart) st.hearts--; // 配對題配錯時已經在 matchTap 扣過心，不重複扣
         }
         JP.saveSoon();
       }
@@ -279,7 +279,7 @@
         const cheer = st.combo >= 3 ? `<span class="combo-pop">${ICON.flame()}連擊 ×${st.combo}</span>` : '';
         pf.className = 'play-foot fb-' + (ok ? 'ok' : 'ng');
         const needAnswer = q.type === 'order' || q.type === 'type' || q.type === 'choice';
-        const ansLine = !ok && q.type === 'type' ? `<div class="rv-ans">正確答案：<b>${esc(q.accept)}</b></div>` : '';
+        const ansLine = !ok && q.type === 'type' ? `<div class="rv-ans">正確答案：<b>${esc([].concat(q.accept)[0])}</b></div>` : '';
         const head = ok ? `<b>${praise[Math.floor(Math.random() * praise.length)]}</b>${cheer}` : `<b>${skipped ? '沒關係，記住它！' : q.type === 'match' ? '再多看一次！' : '正確答案是…'}</b>`;
         pf.innerHTML = `<div class="fb"><div class="fb-head"><span class="fb-ico">${ok ? ICON.check() : ICON.close()}</span>${head}</div>${needAnswer || rv.html ? `<div class="fb-body">${ansLine}${rv.html}</div>` : ''}</div><button type="button" class="btn btn-big ${ok ? 'btn-ok' : 'btn-ng'}" data-act="next" autofocus>${cfg.hearts && st.hearts <= 0 ? '看結果' : '繼續'}</button>`;
         JP.sfx[ok ? 'correct' : 'wrong'](); JP.buzz(ok ? 12 : [30, 40, 30]);
@@ -337,14 +337,14 @@
           if (cur.matched.size === cur.q.pairs.length) {
             cur.done = true;
             const ok = cur.wrongPairs.size === 0;
-            record(ok, cur.q);
+            record(ok, cur.q, false, true);
             feedback(ok, cur.q);
           }
         } else {
           cur.wrongPairs.add(a.id); cur.wrongPairs.add(id);
           [a.btn, btn].forEach((b) => { b.classList.add('shake'); setTimeout(() => b.classList.remove('shake'), 450); });
           JP.sfx.wrong(); JP.buzz(30);
-          if (cfg.hearts) { st.hearts--; hud(); if (st.hearts <= 0) { cur.done = true; record(false, cur.q); feedback(false, cur.q); } }
+          if (cfg.hearts) { st.hearts--; hud(); if (st.hearts <= 0) { cur.done = true; record(false, cur.q, false, true); feedback(false, cur.q); } }
         }
       }
 
@@ -493,7 +493,7 @@
       function quit() {
         if (phase === 'result') return close(result);
         if (phase === 'teach' && !st.answeredN) return close(null);
-        const m = JP.ui.modal(`<div class="confirm"><h3>要離開嗎？</h3><p>這次的進度不會被保存喔。</p><div class="btn-row"><button type="button" class="btn btn-big" data-close>繼續學習</button><button type="button" class="btn btn-ghost danger" data-act="reallyquit">離開</button></div></div>`, { noClose: false });
+        const m = JP.ui.modal(`<div class="confirm"><h3>要離開嗎？</h3><p>這次的經驗值與星星不會保存喔（已作答的單字，複習紀錄仍會保留）。</p><div class="btn-row"><button type="button" class="btn btn-big" data-close>繼續學習</button><button type="button" class="btn btn-ghost danger" data-act="reallyquit">離開</button></div></div>`, { noClose: false });
         m.el.querySelector('[data-act="reallyquit"]').addEventListener('click', () => { m.close(); close(null); });
       }
 
@@ -553,7 +553,7 @@
       JP.sfx.unlock();
       if (cfg.timer) {
         timer = setInterval(() => {
-          if (phase === 'teach') return;
+          if (phase === 'teach' || (cfg.kind === 'quiz' && phase === 'checked')) return; // 自訂測驗：看解說時不扣總時間
           st.timeLeft -= 0.25; progress();
           const t = root.querySelector('.hud-time'); if (t) t.textContent = Math.max(0, Math.ceil(st.timeLeft));
           if (st.timeLeft <= 0) finish(true);

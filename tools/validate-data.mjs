@@ -21,6 +21,7 @@ const JP = sandbox.window.JP;
 const problems = [];
 const bad = (m) => problems.push(m);
 const plain = (s) => String(s).replace(/\|/g, '').replace(/\{[^}]*\}/g, '');
+const isKanji = (c) => /[\u4e00-\u9fff々]/.test(c);
 const kanaOnly = (s) => /^[ぁ-んァ-ヶー・、。！？ 　　]+$/.test(s);
 
 const sentCheck = (where, s, zh, { minTok = 1, maxTok = 99 } = {}) => {
@@ -29,6 +30,10 @@ const sentCheck = (where, s, zh, { minTok = 1, maxTok = 99 } = {}) => {
   if (open !== close) bad(`${where}: {} 不成對 ${s}`);
   const toks = s.split('|');
   if (toks.some((t) => !t)) bad(`${where}: 有空的分詞 ${s}`);
+  // 常見資料錯誤：特殊讀音被逐字標音、助詞黏在前一個詞上、美化語接頭詞被單獨分詞
+  if (/二\{に\}\|?人\{にん\}|一\{いち\}\|?人\{にん\}/.test(s)) bad(`${where}: 特殊讀音被逐字標音（二人＝ふたり、一人＝ひとり）${s}`);
+  toks.forEach((t) => { if (/\}[はをへ]$/.test(t)) bad(`${where}: 助詞（は／を／へ）黏在前一個詞上，羅馬拼音會拼錯「${t}」${s}`); });
+  if (/(^|\|)[おご]\|/.test(s)) bad(`${where}: 「お／ご」應與後面的詞合併 ${s}`);
   if (toks.length < minTok || toks.length > maxTok) bad(`${where}: 分詞數 ${toks.length}（需 ${minTok}~${maxTok}）${s}`);
   if (/[a-zA-Z]/.test(plain(s)) ) bad(`${where}: 含英文字母 ${s}`);
   // 帶 {讀音} 的詞：括號前必須是漢字（振假名只能標漢字），讀音必須是平假名
@@ -83,6 +88,14 @@ JP.GRAMMAR.forEach((g) => {
     if (!/＿/.test(stem)) bad(`${where}: 沒有空格 ＿`);
     if (!/（[^）]+）\s*$/.test(stem)) bad(`${where}: 結尾需有（中文翻譯）`);
     if ((stem.match(/＿+/g) || []).length !== 1) bad(`${where}: 需剛好一個空格`);
+    // 題目中的漢字要標音（{讀音}），翻譯括號內不用
+    const body = stem.replace(/（[^）]*）\s*$/, '');
+    if ((body.match(/\{/g) || []).length !== (body.match(/\}/g) || []).length) bad(`${where}: {} 不成對 ${stem}`);
+    for (const m of body.matchAll(/([^{}]*)\{([^}]*)\}/g)) {
+      if (!/^[ぁ-んァ-ヶー]+$/.test(m[2])) bad(`${where}: 讀音需為假名「${m[2]}」 ${stem}`);
+      if (!isKanji(m[1].slice(-1))) bad(`${where}: 振假名前應為漢字「${m[1]}」 ${stem}`);
+    }
+    if (/[\u4e00-\u9fff々]/.test(body.replace(/[\u4e00-\u9fff々]+\{[^}]*\}/g, ''))) bad(`${where}: 題目有漢字沒有標音 ${stem}`);
     if (wrong.length < 3) bad(`${where}: 干擾選項不足 3 個`);
     if (new Set([ans, ...wrong]).size !== wrong.length + 1) bad(`${where}: 選項重複或答案混入干擾 ${stem}`);
     if (stems.has(stem)) bad(`${where}: 題目重複`);
