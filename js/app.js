@@ -24,6 +24,11 @@
     if (e.key === 'Escape' && JP.ui.closeTop()) e.stopPropagation();
   });
 
+  // 滑鼠移到或點到登入按鈕時，先開始載入登入功能
+  ['pointerover', 'focusin', 'touchstart'].forEach((ev) => document.addEventListener(ev, (e) => {
+    if (JP.sync && JP.sync.preload && e.target.closest && e.target.closest('[data-act="signin"]')) JP.sync.preload();
+  }, { passive: true }));
+
   JP.views.applyTheme();
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener && window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', JP.views.applyTheme);
   JP.views.bind();

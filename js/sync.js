@@ -172,8 +172,15 @@
     pushTimer = setTimeout(push, 2500);
   }
 
+  // 瀏覽器只允許在「按下去的當下」開登入視窗，所以不能等載入完才開：
+  // 開啟「我的」頁、歡迎頁或滑鼠移到登入按鈕時就先在背景載入；還沒載入完就按了，提示再按一次
+  sync.preload = () => { if (!auth) init(); };
   sync.signIn = async () => {
-    if (!auth) { await init(); if (!auth) return; }
+    if (!auth) {
+      init();
+      if (JP.ui && JP.ui.toast) JP.ui.toast('正在載入登入功能，請稍等一下再按一次');
+      return;
+    }
     try {
       set('syncing');
       await auth.signInWithPopup(new window.firebase.auth.GoogleAuthProvider());
