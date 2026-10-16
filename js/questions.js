@@ -162,7 +162,7 @@
   B.type = (it) => {
     if (it.kind === 'kana') {
       if (it.rare) return null;
-      return mk(it, 'type', 2, { type: 'type', title: '輸入羅馬拼音', prompt: { jp: esc(it.jp), say: it.jp }, accept: it.ro, placeholder: '例：ka' });
+      return mk(it, 'type', 2, { type: 'type', title: '輸入羅馬拼音', prompt: { jp: esc(it.jp), say: it.jp }, accept: it.jp === 'を' || it.jp === 'ヲ' ? ['wo', 'o'] : it.ro, placeholder: '例：ka' }); // を的實際發音是 o，兩種寫法都接受
     }
     return mk(it, 'type', 2, { type: 'type', title: '輸入這個單字的羅馬拼音', prompt: { em: it.em, zh: it.zh, say: sayOf(it) }, accept: it.ro, placeholder: '羅馬拼音，例：' + (it.ro.length > 6 ? it.ro.slice(0, 4) + '…' : 'neko') });
   };
@@ -337,11 +337,11 @@
     const all = g.quiz.map(([stem, ans, ...wrong]) => {
       const m = stem.match(/（(.*?)）\s*$/);
       const body = stem.replace(/（.*?）\s*$/, '');
-      const html = esc(body).replace(/＿+/g, '<span class="blank wide"></span>');
+      const html = ruby(body).replace(/＿+/g, '<span class="blank wide"></span>'); // 題目的漢字用 漢字{よみ} 標音（可由設定關閉）
       const choices = shuffle([ans].concat(shuffle(wrong).slice(0, 3))).map((c) => ({ html: esc(c), correct: c === ans, key: c }));
       return {
-        type: 'choice', sub: 'cloze', itemId: null, d: 1, layout: 'list2', title: '選出正確的說法', stem, prompt: { html, zh: m ? m[1] : '', say: body.replace(/＿+/g, ans) },
-        choices, reveal: { html: `<div class="rv-sent">${esc(body.replace(/＿+/g, ans))}</div>${m ? `<div class="rv-zh">${esc(m[1])}</div>` : ''}` },
+        type: 'choice', sub: 'cloze', itemId: null, d: 1, layout: 'list2', title: '選出正確的說法', stem, prompt: { html, zh: m ? m[1] : '', say: plain(body).replace(/＿+/g, ans) },
+        choices, reveal: { html: `<div class="rv-sent">${ruby(body.replace(/＿+/g, ans))}</div>${m ? `<div class="rv-zh">${esc(m[1])}</div>` : ''}` },
       };
     });
     const total = n || 10;
@@ -394,7 +394,6 @@
     const extras = (opts.extra || []).map(JP.item).filter(Boolean);
     const tiers = opts.easy ? [['easy'], ['easy', 'mid'], ['mid']][Math.min(level, 2)] : [['easy'], ['mid'], ['mid', 'hard']][Math.min(level, 2)];
     const base = opts.easy ? clamp(n * 2 + 2, 6, 12) : clamp(n * 2 + 2, 10, 16);
-    const count = base + (level > 0 ? Math.min(3, extras.length) : 0);
     const qs = [];
     const used = {};
     const push = (it, tier) => {
@@ -410,7 +409,6 @@
     qs.sort((a, b) => a.d - b.d + (Math.random() - 0.5) * 1.4);
     spread(qs);
     if (withMatch) qs.splice(Math.floor(qs.length / 2), 0, matchQ(sample(its, Math.min(5, n))));
-    void count;
     return qs;
   }
 

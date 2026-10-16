@@ -53,11 +53,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          node -e "JSON.parse(require('fs').readFileSync('audio/manifest.json','utf8'))"
           git add audio
           if git diff --cached --quiet; then
             echo "沒有新的音檔需要提交"
           else
             git commit -m "Add pre-recorded Japanese audio"
+            # 執行期間 main 可能已有新的提交：先併進來再推，避免 push 失敗
+            git pull --rebase origin "${GITHUB_REF_NAME}"
             git push
           fi
 

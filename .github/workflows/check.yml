@@ -28,5 +28,7 @@ jobs:
         run: node tools/validate-data.mjs
       - name: 單字庫資料檢查（翻譯結果與輸入一致）
         run: node tools/build-bank.mjs n3 check
+      - name: 預錄語音涵蓋檢查（只警告）
+        run: node tools/check-audio.mjs
       - name: 出題冒煙測試
         run: node tools/smoke-test.mjs

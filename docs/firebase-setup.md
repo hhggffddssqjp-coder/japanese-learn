@@ -19,11 +19,17 @@ Firebase 的免費方案（Spark）足夠個人使用，不需要綁信用卡。
    service cloud.firestore {
      match /databases/{database}/documents {
        match /users/{uid} {
-         allow read, write: if request.auth != null && request.auth.uid == uid;
+         allow read, delete: if request.auth != null && request.auth.uid == uid;
+         allow create, update: if request.auth != null && request.auth.uid == uid
+           && request.resource.data.keys().hasOnly(['state', 'mt', 'v', 'updated'])
+           && request.resource.data.state is string
+           && request.resource.data.state.size() < 900000;
        }
      }
    }
    ```
+
+   這份規則限制：只能讀寫自己的文件、只能寫入約定的欄位、內容不超過約 900KB，避免有人拿你的專案當免費空間。**舊版規則（`allow read, write`）也能用，但建議更新。**
 
 8. 打開 `js/sync-config.js`，把步驟 3 的四個值貼進去並存檔：
 
@@ -42,10 +48,12 @@ Firebase 的免費方案（Spark）足夠個人使用，不需要綁信用卡。
 
 ## 同步方式
 
-- 進度以「合併」同步，不是覆蓋：經驗值、星星、收集的單字取較大值或聯集；兩台裝置都學過的單字，以複習次數較多的那份為準。
+- 進度以「合併」同步，不是覆蓋：經驗值、星星、收集的單字取較大值或聯集；兩台裝置都學過的單字，以複習次數較多的那份為準。上傳時也會先讀取雲端進度、合併後再寫回（使用 transaction），兩台裝置同時使用不會互相蓋掉。
+- 進度檔記錄所屬帳號；同一台裝置換另一個 Google 帳號登入時，不會把上一個人的進度併進去。登出時會問你要不要順便清掉這台裝置上的進度（共用電腦建議清除）。
 - 變更後約 2.5 秒會自動上傳；回到分頁時（超過 1 分鐘）會自動下載合併。
 - 外觀、語音等設定以最近修改的那台為準；日語語音選擇是裝置專屬，不會被同步。
-- 「清除所有進度」在登入狀態下會同時清掉雲端的備份。
+- 「清除所有進度」在登入狀態下會同時把雲端備份重置為空白（記下重置時間）；其他裝置下次同步時會採用這個重置，不會把舊進度推回來。無法連上雲端時會提示「目前無法清除雲端備份」而不會清除。
+- 只有登入過的瀏覽器，開頁時才會載入 Firebase 的程式（約數百 KB）；沒登入過的人按「登入」時才載入。
 - 離線時照常學習，恢復連線後會自動補上傳。
 
 ## 疑難排解
@@ -56,3 +64,12 @@ Firebase 的免費方案（Spark）足夠個人使用，不需要綁信用卡。
 | 顯示「Firestore 規則尚未設定好」 | 步驟 6、7 沒做完，或規則沒有發布 |
 | 登入視窗沒跳出來 | 瀏覽器擋彈出視窗，請允許後再試 |
 | 「我的」頁面顯示尚未啟用 | `js/sync-config.js` 裡的值是空的，或部署後還沒更新（強制重新整理） |
+
+## 加強 API key 的保護（建議）
+
+`js/sync-config.js` 裡的 API key 公開是正常的，但可以限制它只能被你的網站使用：
+
+1. 打開 [Google Cloud Console → API 和服務 → 憑證](https://console.cloud.google.com/apis/credentials)，選你的專案，點 **Browser key**（Firebase 自動建立的那把）。
+2. **應用程式限制** 選「網站」，新增 `https://hhggffddssqjp-coder.github.io/*` 與 `http://localhost/*`。
+3. **API 限制** 選「限制金鑰」，只勾選 Identity Toolkit API、Token Service API、Cloud Firestore API。
+4. 進一步可以到 Firebase 控制台啟用 **App Check**（reCAPTCHA v3），擋掉不是從你的網站發出的請求。

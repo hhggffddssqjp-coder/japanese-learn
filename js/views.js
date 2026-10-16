@@ -201,7 +201,8 @@
       dexSearch.loading = true;
       Promise.all(JP.bank.LEVELS.map((l) => JP.bank.load(l.id))).catch(() => {}).then(() => { dexSearch.loading = false; if (currentRoute === 'dex') renderDexBody(); });
     }
-    const hit = (it) => it.jp.includes(q) || it.rd.includes(q) || it.zh.toLowerCase().includes(q) || it.ro.includes(q) || JP.toHira(it.jp).includes(q);
+    const qh = JP.toHira(q);
+    const hit = (it) => it.jp.includes(q) || it.rd.includes(q) || it.zh.toLowerCase().includes(q) || it.ro.includes(q) || JP.toHira(it.jp).includes(qh) || JP.toHira(it.rd).includes(qh);
     const all = JP.itemList('word').filter((it) => hit(it) && (dexState.lv === 'all' || it.lv === dexState.lv) && (dexState.pos === 'all' || it.pos.includes(dexState.pos)));
     // 完全相同的排前面
     all.sort((a, b) => (+(b.jp === q || b.rd === q || b.zh === q)) - (+(a.jp === q || a.rd === q || a.zh === q)));
@@ -493,11 +494,11 @@
     fr.onload = () => {
       try {
         const o = JSON.parse(fr.result);
-        if (typeof o.xp !== 'number' || typeof o.cards !== 'object') throw new Error('bad');
-        Object.keys(S).forEach((k) => delete S[k]);
-        Object.assign(S, JP.defaults(), o);
-        S.set = Object.assign(JP.defaults().set, o.set || {});
-        S.stats = Object.assign(JP.defaults().stats, o.stats || {});
+        if (!o || typeof o.xp !== 'number' || typeof o.cards !== 'object') throw new Error('bad');
+        const voice = S.set.voice;
+        JP.replaceState(o); // 清洗欄位，擋掉型別錯誤與夾帶的內容
+        S.set.voice = voice; // 語音是裝置專屬設定
+        if (JP.sync && JP.sync.user) S.uid = JP.sync.user.uid; else delete S.uid; // 匯入的進度歸現在的帳號所有
         JP.save(); applyTheme(); toast('匯入完成'); refresh(); updateChips();
       } catch (e) { toast('檔案格式不正確'); }
     };
@@ -506,10 +507,28 @@
   function resetData() {
     const m = modal(`<div class="confirm"><h3>清除所有進度？</h3><p>經驗值、連勝、單字收集與成就都會消失，無法復原。建議先匯出備份。</p><div class="btn-row"><button type="button" class="btn btn-big" data-close autofocus>取消</button><button type="button" class="btn btn-ghost danger" data-act="yes">確定清除</button></div></div>`);
     m.el.querySelector('[data-act="yes"]').addEventListener('click', async () => {
-      if (JP.sync && JP.sync.user) await JP.sync.wipe();
-      try { localStorage.removeItem('jpl.v2'); localStorage.removeItem('jpl.v1'); } catch (e) { /* 略過 */ }
-      location.reload();
+      const ts = Date.now();
+      if (JP.sync && JP.sync.user) {
+        const ok = await JP.sync.wipe(ts);
+        if (!ok) { toast('目前無法清除雲端備份，請確認網路後再試'); return; }
+      }
+      clearLocal(ts);
     });
+  }
+  // 清掉這台裝置上的進度與偏好；先把記憶體裡的進度換成空白，否則 pagehide 會把舊進度寫回去
+  function clearLocal(ts) {
+    JP.replaceState(JP.defaults());
+    if (ts) S.resetAt = ts;
+    try { Object.keys(localStorage).filter((k) => k.startsWith('jpl.') && k !== 'jpl.signedIn').forEach((k) => localStorage.removeItem(k)); } catch (e) { /* 略過 */ }
+    try { localStorage.setItem('jpl.v2', JSON.stringify(S)); } catch (e) { /* 略過 */ }
+    location.reload();
+  }
+  // 登出：先把進度存到雲端，再問要不要清掉這台裝置上的進度（共用電腦時避免進度混在一起）
+  async function signOutFlow() {
+    try { if (JP.sync.flush) await JP.sync.flush(); } catch (e) { /* 略過 */ }
+    await JP.sync.signOut();
+    const m = modal(`<div class="confirm"><h3>已登出</h3><p>要一併清除這台裝置上的進度嗎？如果這是共用的電腦，建議清除，下一位使用者就不會看到你的進度。進度已經保存在雲端，下次登入會還原。</p><div class="btn-row"><button type="button" class="btn btn-big" data-close>保留在這台裝置</button><button type="button" class="btn btn-ghost danger" data-act="clearlocal">清除這台裝置的進度</button></div></div>`);
+    m.el.querySelector('[data-act="clearlocal"]').addEventListener('click', () => clearLocal(0));
   }
 
   function applyTheme() {
@@ -635,7 +654,7 @@
         const a = el.dataset.act;
         if (a === 'testvoice') return testVoice();
         if (a === 'signin') return JP.sync.signIn();
-        if (a === 'signout') return JP.sync.signOut().then(() => toast('已登出，進度仍保留在這個瀏覽器'));
+        if (a === 'signout') return signOutFlow();
         if (a === 'syncnow') return JP.sync.now().then(() => toast(JP.sync.status === 'error' ? JP.sync.error : '已同步'));
         if (a === 'export') return exportData();
         if (a === 'import') return document.getElementById('import-file').click();

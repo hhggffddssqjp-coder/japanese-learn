@@ -29,6 +29,12 @@
 
   const RO_FIX = { こんにちは: 'konnichiwa', こんばんは: 'konbanwa' }; // は 作助詞時讀 wa
   // 詞性（簡易推定：依課程名稱）
+  // 依課程名稱推定詞性不準的單字（形容詞、動詞、副詞、感嘆詞放在主題課裡）
+  const POS_FIX = {
+    嬉しい: 'い形容詞', 悲しい: 'い形容詞', 怖い: 'い形容詞', 眠い: 'い形容詞', 恥ずかしい: 'い形容詞', 痛い: 'い形容詞',
+    疲れる: '動詞', いつも: '副詞', 時々: '副詞', なぜ: '副詞',
+    こんにちは: '感嘆詞', おはよう: '感嘆詞', こんばんは: '感嘆詞', ありがとう: '感嘆詞', すみません: '感嘆詞', さようなら: '感嘆詞', はい: '感嘆詞', いいえ: '感嘆詞',
+  };
   const NA_I = new Set(['きれい', '嫌い', '大嫌い', '有名', '綺麗']);
   const posOf = (lid, jp) => (/^verb/.test(lid) ? '動詞' : /^adj/.test(lid) ? (/い$/.test(jp) && !NA_I.has(jp) ? 'い形容詞' : 'な形容詞') : /^adverb/.test(lid) ? '副詞' : '名詞');
   JP.LESSONS.forEach((l) => {
@@ -37,7 +43,7 @@
       ITEMS.set(id, {
         id, kind: 'word', jp, rd: rd || jp, hasKanji: !!rd && rd !== jp, ro: RO_FIX[jp] || JP.toRomaji(rd || jp), zh, em,
         ex, exZh, tip, exs: [[ex, exZh], [ex2, ex2Zh]].filter((e) => e[0]), lesson: l.id, noOrder: !!l.noOrder,
-        pos: posOf(l.id, jp), lv: (JP.WORD_LV || {})[jp] || '',
+        pos: POS_FIX[jp] || posOf(l.id, jp), lv: (JP.WORD_LV || {})[jp] || '',
       });
     });
   });
@@ -180,7 +186,7 @@
     ns.forEach((n) => {
       const p = S.nodes[n.id];
       if (!p || !p.stars) S.nodes[n.id] = Object.assign(p || { plays: 0 }, { stars: 0, skipped: true });
-      n.items.forEach((id) => JP.seed(id, 2));
+      n.items.forEach((id) => JP.seed(id));
     });
     const last = ns[ns.length - 1];
     S.unlocked = Math.max(S.unlocked, Math.min(NODES.length - 1, last.idx + 1));
