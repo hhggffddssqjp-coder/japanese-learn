@@ -393,6 +393,7 @@
 
   /* ───────────── 我的 ───────────── */
   function viewMe() {
+    if (JP.sync && JP.sync.enabled && !JP.sync.user && JP.sync.preload) JP.sync.preload(); // 先在背景載入登入功能，按「登入」時才能立刻開視窗
     const L = JP.levelInfo(), rk = JP.rankOf(L.level);
     const learnedW = JP.learnedIds().filter((i) => i[0] === 'w').length, learnedK = JP.learnedIds().filter((i) => i[0] !== 'w').length;
     const acc = S.stats.answered ? Math.round((S.stats.correct / S.stats.answered) * 100) : 0;
@@ -541,6 +542,7 @@
 
   /* ───────────── 歡迎頁 / 程度選擇 ───────────── */
   function showWelcome(opts = {}) {
+    if (JP.sync && JP.sync.enabled && !JP.sync.user && JP.sync.preload) JP.sync.preload();
     const root = document.getElementById('overlay');
     const levels = [
       ['intro', '🌱', '連五十音都不會', '從零開始：先認識文字，每關只學 2～5 個字'],
