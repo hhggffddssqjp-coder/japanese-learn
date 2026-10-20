@@ -42,6 +42,7 @@ Settings → Pages → Deploy from a branch → 選擇分支與 `/ (root)`。所
 | `tools/build-bank.mjs`, `tools/bank-src/` | 單字庫資料處理：`in-XX.json` 為 JLPT 單字表（單字、讀音、英文），`out-XX.json` 為 AI 撰寫的中文釋義、詞性與例句；`node tools/build-bank.mjs n3 build` 合併成 `js/bank-n3.js` |
 | `tools/build-word-levels.mjs`, `js/data-word-levels.js` | 既有單字的 JLPT 級別標示 |
 | `tools/validate-data.mjs` | 題庫格式檢查（`node tools/validate-data.mjs`） |
+| `tools/gen-samples.mjs`, `.github/workflows/voice-samples.yml` | 語音試聽樣本：同一組句子用多種語音錄好，產生 `voice-samples.html` 讓你比較聽感，再決定重錄全部音檔要用哪個語音 |
 | `tools/check-audio.mjs` | 檢查預錄語音是否涵蓋所有文字（只警告）；改了單字或例句後，缺的句子會先用裝置語音，之後重跑「產生語音檔」補齊 |
 | `tools/smoke-test.mjs` | 出題冒煙測試（每關／每字／每題型反覆出題並檢查）；與資料檢查一起由 `.github/workflows/check.yml` 在 PR 時自動執行 |
 | `js/data-grammar.js` | 文法課（N5 10 課、N4 6 課；擴充見 data-grammar-n4.js） |
