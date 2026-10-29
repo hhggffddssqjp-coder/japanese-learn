@@ -70,6 +70,11 @@ Firebase 的免費方案（Spark）足夠個人使用，不需要綁信用卡。
 `js/sync-config.js` 裡的 API key 公開是正常的，但可以限制它只能被你的網站使用：
 
 1. 打開 [Google Cloud Console → API 和服務 → 憑證](https://console.cloud.google.com/apis/credentials)，選你的專案，點 **Browser key**（Firebase 自動建立的那把）。
-2. **應用程式限制** 選「網站」，新增 `https://hhggffddssqjp-coder.github.io/*` 與 `http://localhost/*`。
+2. **應用程式限制** 選「網站」，新增下面三個（**少了第 2 個，登入會失敗**）：
+   - `https://hhggffddssqjp-coder.github.io/*`（你的網站）
+   - `https://<你的專案ID>.firebaseapp.com/*`（Firebase 登入視窗的網域，也就是 `js/sync-config.js` 裡的 `authDomain`；登入時是這個網域在呼叫 API，不是你的網站）
+   - `http://localhost/*`（自己測試用，可省略）
+   - 如果專案還有 `https://<你的專案ID>.web.app/*`，也一併加入。
+   已登入的人用舊的登入狀態同步時不會發現問題，所以改完限制後，請**登出再重新登入一次**確認。
 3. **API 限制** 選「限制金鑰」，只勾選 Identity Toolkit API、Token Service API、Cloud Firestore API。
 4. 進一步可以到 Firebase 控制台啟用 **App Check**（reCAPTCHA v3），擋掉不是從你的網站發出的請求。
