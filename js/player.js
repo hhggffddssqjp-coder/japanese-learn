@@ -87,6 +87,9 @@
     return `<h2 class="q-title">${esc(q.title)}</h2>${promptHtml(q)}${body}`;
   }
 
+  // 秒數顯示：超過一分鐘用 m:ss
+  const fmtTime = (sec) => { const n = Math.max(0, Math.ceil(sec)); return n >= 60 ? `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}` : String(n); };
+
   /* ───── 主程式 ───── */
   function play(cfg) {
     return new Promise((resolve) => {
@@ -103,6 +106,9 @@
       let timer = 0;
       let nextTimer = 0;
       let qTimer = 0;
+      let paused = false; // 離開確認視窗開著時暫停所有計時
+      const timeouts = new Set(); // 自動發音、延遲換題等計時器，關閉畫面時要全部取消
+      const later = (fn, ms) => { const id = setTimeout(() => { timeouts.delete(id); fn(); }, ms); timeouts.add(id); return id; };
       const teachIds = cfg.teachIds || [];
       const gen = cfg.gen || null;
 
@@ -116,6 +122,7 @@
 
       /* ----- 外框 ----- */
       root.className = `overlay open k-${cfg.kind}${world ? ' w-' + world.theme : ''}`;
+      root.setAttribute('aria-label', cfg.title || '闖關');
       if (cfg.sound) root.dataset.sound = cfg.sound;
       document.body.classList.add('noscroll');
       root.innerHTML = `<div class="play">
@@ -132,7 +139,7 @@
 
       function hud() {
         let h = '';
-        if (cfg.timer) h += `<span class="hud-time">${Math.max(0, Math.ceil(st.timeLeft))}</span>`;
+        if (cfg.timer) h += `<span class="hud-time">${fmtTime(st.timeLeft)}</span>`;
         if (cfg.qtime) h += `<span class="hud-qt" id="qt">${cur && phase === 'ask' && cur.qleft != null ? Math.max(0, Math.ceil(cur.qleft)) : ''}</span>`;
         if (cfg.hearts) h += `<span class="hud-hearts">${Array.from({ length: cfg.hearts }, (_, i) => `<span class="${i < st.hearts ? 'on' : 'off'}">${ICON.heart()}</span>`).join('')}</span>`;
         if (cfg.timer || cfg.kind === 'blitz') h += `<span class="hud-score">${st.score}</span>`;
@@ -167,7 +174,7 @@
           pb.innerHTML = `<div class="tdots">${items.map((_, i) => `<i class="${i === ti ? 'on' : i < ti ? 'done' : ''}"></i>`).join('')}</div><div class="tcard-wrap" key="${ti}">${cardOf(it)}</div>`;
           const last = ti === items.length - 1;
           pf.innerHTML = `${ti > 0 ? `<button type="button" class="btn btn-ghost" data-act="tprev" aria-label="上一個">${ICON.back()}</button>` : ''}<button type="button" class="btn btn-big" data-act="${last ? 'start' : 'tnext'}" autofocus>${last ? '開始挑戰' : '下一個'}</button>`;
-          if (S.set.auto && JP.tts.can()) setTimeout(() => { if (phase === 'teach') JP.tts.speak(Q.sayOf(it)); }, 350);
+          if (S.set.auto && JP.tts.can()) later(() => { if (phase === 'teach') JP.tts.speak(Q.sayOf(it)); }, 350);
         }
         progress(); hud();
         root.querySelector('.play-scroll').scrollTop = 0;
@@ -194,16 +201,19 @@
         clearInterval(qTimer);
         if (cfg.qtime && q.type !== 'match') {
           cur.qleft = cfg.qtime;
+          let lastQ = Date.now();
           qTimer = setInterval(() => {
             if (phase !== 'ask' || !cur) return clearInterval(qTimer);
-            cur.qleft -= 0.25;
+            const nowQ = Date.now(), dtQ = (nowQ - lastQ) / 1000; lastQ = nowQ; // 用實際經過的時間，頁面在背景或很忙時才不會變慢
+            if (paused) return;
+            cur.qleft -= dtQ;
             const e = $('qt'); if (e) { e.textContent = Math.max(0, Math.ceil(cur.qleft)); e.classList.toggle('low', cur.qleft <= 3); }
             if (cur.qleft <= 0) { clearInterval(qTimer); check(true); }
           }, 250);
         }
         progress(); hud();
         root.querySelector('.play-scroll').scrollTop = 0;
-        if (q.prompt && q.prompt.auto && Q.canListen()) setTimeout(() => { if (cur && cur.q === q && phase === 'ask') JP.tts.speak(q.prompt.say); }, 300);
+        if (q.prompt && q.prompt.auto && Q.canListen()) later(() => { if (cur && cur.q === q && phase === 'ask') JP.tts.speak(q.prompt.say); }, 300);
       }
 
       function renderOrder() {
@@ -238,7 +248,7 @@
             st.touched.add(id);
             if (q.type === 'match') { if (!st.srsDone.has(id)) { JP.review(id, !cur.wrongPairs.has(id)); st.srsDone.add(id); } }
             else if (!st.srsDone.has(id)) { JP.review(id, ok); st.srsDone.add(id); }
-            else if (ok && !q.retry) { const c = JP.card(id); if (c) { c.ok++; } } // 重做題答對不再累計，否則「錯的字」很快就不算弱點
+
           });
         }
         if (ok) {
@@ -281,13 +291,12 @@
         const needAnswer = q.type === 'order' || q.type === 'type' || q.type === 'choice';
         const ansLine = !ok && q.type === 'type' ? `<div class="rv-ans">正確答案：<b>${esc([].concat(q.accept)[0])}</b></div>` : '';
         const head = ok ? `<b>${praise[Math.floor(Math.random() * praise.length)]}</b>${cheer}` : `<b>${skipped ? '沒關係，記住它！' : q.type === 'match' ? '再多看一次！' : '正確答案是…'}</b>`;
-        pf.innerHTML = `<div class="fb"><div class="fb-head"><span class="fb-ico">${ok ? ICON.check() : ICON.close()}</span>${head}</div>${needAnswer || rv.html ? `<div class="fb-body">${ansLine}${rv.html}</div>` : ''}</div><button type="button" class="btn btn-big ${ok ? 'btn-ok' : 'btn-ng'}" data-act="next" autofocus>${cfg.hearts && st.hearts <= 0 ? '看結果' : '繼續'}</button>`;
+        pf.innerHTML = `<div class="fb" role="status" aria-live="assertive"><div class="fb-head"><span class="fb-ico">${ok ? ICON.check() : ICON.close()}</span>${head}</div>${needAnswer || rv.html ? `<div class="fb-body">${ansLine}${rv.html}</div>` : ''}</div><button type="button" class="btn btn-big ${ok ? 'btn-ok' : 'btn-ng'}" data-act="next" autofocus>${cfg.hearts && st.hearts <= 0 ? '看結果' : '繼續'}</button>`;
         JP.sfx[ok ? 'correct' : 'wrong'](); JP.buzz(ok ? 12 : [30, 40, 30]);
         if (ok && st.combo >= 3 && [3, 5, 8, 10, 15, 20].includes(st.combo)) setTimeout(() => JP.sfx.combo(st.combo), 260);
         const btn = pf.querySelector('[data-act="next"]'); if (btn) btn.focus({ preventScroll: true });
         // 答對後讀出答案（聽力題已經聽過，略過）
-        if (ok && S.set.auto && rv.say && !q.listening && JP.tts.can()) setTimeout(() => JP.tts.speak(rv.say), 220);
-        if (!ok && S.set.auto && rv.say && JP.tts.can()) setTimeout(() => JP.tts.speak(rv.say), 220);
+        if (S.set.auto && rv.say && JP.tts.can() && (!ok || !q.listening)) later(() => JP.tts.speak(rv.say), 220); // 答對的聽力題已經聽過，不再重複念
         hud(); progress();
         if (cfg.kind === 'blitz') nextTimer = setTimeout(afterFeedback, ok ? 650 : 1700);
       }
@@ -319,7 +328,7 @@
         }
         record(ok, q, skipped);
         requeue(q, ok);
-        if (cfg.kind === 'placement') { setTimeout(nextQuestion, 120); return; }
+        if (cfg.kind === 'placement') { later(nextQuestion, 120); return; }
         feedback(ok, q, skipped);
       }
 
@@ -327,7 +336,7 @@
       function matchTap(btn) {
         if (phase !== 'ask' || cur.done || btn.classList.contains('ok')) return;
         const side = btn.dataset.side, id = btn.dataset.id;
-        if (cur.pick && cur.pick.side === side) { cur.pick.btn.classList.remove('sel'); cur.pick = btn.classList.contains('sel') ? null : { side, id, btn }; if (cur.pick) btn.classList.add('sel'); return; }
+        if (cur.pick && cur.pick.side === side) { const same = cur.pick.btn === btn; cur.pick.btn.classList.remove('sel'); cur.pick = same ? null : { side, id, btn }; if (cur.pick) btn.classList.add('sel'); return; }
         if (!cur.pick) { cur.pick = { side, id, btn }; btn.classList.add('sel'); const p = cur.q.pairs.find((x) => x.id === id); if (side === 'l' && JP.tts.can() && S.set.auto) JP.tts.speak(p.say); return; }
         const a = cur.pick; cur.pick = null; a.btn.classList.remove('sel');
         if (a.id === id) {
@@ -439,10 +448,11 @@
           hero = win ? '🎉' : '👹';
           sub = win ? (r.kind === 'testout' ? '跳級成功！這個世界全部解鎖了' : '鬼關突破！') : '鬼還沒被打倒，再試一次吧';
         } else if (r.kind === 'blitz') { hero = '⚡'; sub = r.newBest ? '新紀錄！' : `個人最佳 ${r.best} 題`; }
+        else if (r.kind === 'review' || r.kind === 'weak' || r.kind === 'listen') { hero = r.acc >= 0.9 ? '🏆' : r.acc >= 0.7 ? '🎊' : '💪'; sub = r.acc >= 0.9 ? '幾乎全對！' : r.acc >= 0.7 ? '不錯喔！' : '多練幾次就會更穩'; }
         else if (r.kind === 'quiz') { hero = r.acc >= 0.9 ? '🏆' : r.acc >= 0.7 ? '🎊' : '💪'; sub = r.acc >= 0.9 ? '幾乎全對！' : r.acc >= 0.7 ? '不錯喔！' : '多練幾次就會更穩'; }
         else if (r.kind === 'placement') { hero = '🧭'; sub = '程度測驗完成'; }
         else { hero = r.stars === 3 ? '🏆' : r.stars === 2 ? '🎊' : '👍'; sub = r.stars === 3 ? '完美表現！' : r.stars === 2 ? '做得很好！' : '完成了！再練幾次會更穩'; }
-        const title = r.kind === 'blitz' ? `${r.score} 題` : r.kind === 'quiz' ? `${r.correct} / ${r.total}` : r.kind === 'placement' ? '' : win ? '關卡完成' : '挑戰失敗';
+        const title = r.kind === 'blitz' ? `${r.score} 題` : (r.kind === 'quiz' || r.kind === 'review' || r.kind === 'weak' || r.kind === 'listen') ? `${r.correct} / ${r.total}` : r.kind === 'placement' ? '' : win ? '關卡完成' : '挑戰失敗';
         const placeInfo = r.kind === 'placement' ? placementText(r) : '';
         const tiles = [];
         if (r.kind === 'blitz') tiles.push(['答對', r.score]);
@@ -481,7 +491,7 @@
 
       /* ----- 關閉 ----- */
       function close(res) {
-        clearInterval(timer); clearInterval(qTimer); clearTimeout(nextTimer);
+        clearInterval(timer); clearInterval(qTimer); clearTimeout(nextTimer); timeouts.forEach(clearTimeout); timeouts.clear();
         document.removeEventListener('keydown', onKey, true);
         delete root.dataset.sound; delete root.dataset.phase;
         JP.tts.cancel(); JP.ui.stopConfetti();
@@ -493,7 +503,8 @@
       function quit() {
         if (phase === 'result') return close(result);
         if (phase === 'teach' && !st.answeredN) return close(null);
-        const m = JP.ui.modal(`<div class="confirm"><h3>要離開嗎？</h3><p>這次的經驗值與星星不會保存喔（已作答的單字，複習紀錄仍會保留）。</p><div class="btn-row"><button type="button" class="btn btn-big" data-close>繼續學習</button><button type="button" class="btn btn-ghost danger" data-act="reallyquit">離開</button></div></div>`, { noClose: false });
+        paused = true;
+        const m = JP.ui.modal(`<div class="confirm"><h3>要離開嗎？</h3><p>這次的經驗值與星星不會保存喔（已作答的單字，複習紀錄仍會保留）。</p><div class="btn-row"><button type="button" class="btn btn-big" data-close>繼續學習</button><button type="button" class="btn btn-ghost danger" data-act="reallyquit">離開</button></div></div>`, { onClose: () => { paused = false; } });
         m.el.querySelector('[data-act="reallyquit"]').addEventListener('click', () => { m.close(); close(null); });
       }
 
@@ -535,8 +546,11 @@
         if (!root.classList.contains('open')) return;
         if (document.querySelector('.modal.in')) return;
         const inInput = e.target && e.target.tagName === 'INPUT';
-        if (e.key === 'Escape') { e.preventDefault(); return quit(); }
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); return quit(); } // stopPropagation：避免全域的 Esc 處理又把剛開的確認視窗關掉
         if (e.key === 'Enter') {
+          if (e.repeat || e.isComposing) return; // 長按 Enter 不要連跳好幾個畫面；輸入法選字中的 Enter 不算
+          const ae = document.activeElement;
+          if (ae && ae.tagName === 'BUTTON' && !ae.matches('[data-act]')) return; // 焦點在其他按鈕（例如發音鈕）時，讓它自己處理 Enter
           const btn = pf.querySelector('[data-act="check"],[data-act="next"],[data-act="start"],[data-act="tnext"],[data-act="exit"]');
           if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
           return;
@@ -552,10 +566,12 @@
       /* ----- 啟動 ----- */
       JP.sfx.unlock();
       if (cfg.timer) {
+        let lastT = Date.now();
         timer = setInterval(() => {
-          if (phase === 'teach' || (cfg.kind === 'quiz' && phase === 'checked')) return; // 自訂測驗：看解說時不扣總時間
-          st.timeLeft -= 0.25; progress();
-          const t = root.querySelector('.hud-time'); if (t) t.textContent = Math.max(0, Math.ceil(st.timeLeft));
+          const nowT = Date.now(), dtT = (nowT - lastT) / 1000; lastT = nowT;
+          if (paused || phase === 'teach' || (cfg.kind === 'quiz' && phase === 'checked')) return; // 自訂測驗：看解說時不扣總時間
+          st.timeLeft -= dtT; progress();
+          const t = root.querySelector('.hud-time'); if (t) t.textContent = fmtTime(st.timeLeft);
           if (st.timeLeft <= 0) finish(true);
         }, 250);
       }

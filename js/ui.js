@@ -38,12 +38,34 @@
 
   /* ───── 對話框 / 底部面板 ───── */
   const modals = [];
+  // 對話框或全螢幕畫面開著時，背後的頁面設為 inert：鍵盤 Tab 與螢幕閱讀器都不會跑到背後
+  function syncInert() {
+    const ov = document.getElementById('overlay');
+    const overlayOpen = !!(ov && ov.classList.contains('open'));
+    const dialog = modals.length > 0;
+    const set = (el, on) => { if (el) { if (on) el.setAttribute('inert', ''); else el.removeAttribute('inert'); } };
+    set(document.querySelector('.shell'), dialog || overlayOpen);
+    set(document.querySelector('.tabbar'), dialog || overlayOpen);
+    set(ov, dialog);
+  }
   function modal(html, opts = {}) {
     const root = document.createElement('div');
     root.className = 'modal' + (opts.sheet ? ' sheet' : '') + (opts.cls ? ' ' + opts.cls : '');
     root.innerHTML = `<div class="modal-bg"></div><div class="modal-box" role="dialog" aria-modal="true">${opts.noClose ? '' : `<button class="modal-x" aria-label="關閉">${ICON.close()}</button>`}${html}</div>`;
     document.body.appendChild(root);
     requestAnimationFrame(() => root.classList.add('in'));
+    const opener = document.activeElement; // 關閉時把焦點還給原本的按鈕
+    const heading = root.querySelector('h1, h2, h3');
+    if (heading) { heading.id = heading.id || 'mt' + Math.random().toString(36).slice(2, 8); root.querySelector('.modal-box').setAttribute('aria-labelledby', heading.id); }
+    // 鍵盤 Tab 只在對話框內循環，不會跑到背後的頁面
+    root.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const f = Array.from(root.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter((x) => !x.disabled && x.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !root.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (document.activeElement === last || !root.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+    });
     let closed = false;
     const api = {
       el: root,
@@ -53,8 +75,10 @@
         root.classList.remove('in');
         const i = modals.indexOf(api);
         if (i >= 0) modals.splice(i, 1);
+        syncInert();
         setTimeout(() => root.remove(), 220);
         if (opts.onClose) opts.onClose();
+        if (opener && opener.focus && document.contains(opener) && !modals.length) { try { opener.focus({ preventScroll: true }); } catch (e) { /* 略過 */ } }
       },
     };
     root.querySelector('.modal-bg').addEventListener('click', () => { if (!opts.noClose) api.close(); });
@@ -62,6 +86,7 @@
     if (x) x.addEventListener('click', api.close);
     root.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) api.close(); });
     modals.push(api);
+    syncInert();
     const first = root.querySelector('[autofocus], .btn');
     if (first && !opts.noFocus) setTimeout(() => first.focus({ preventScroll: true }), 60);
     return api;
@@ -108,5 +133,5 @@
   const speakBtn = (text, cls = '', slow = false) =>
     `<button type="button" class="spk ${cls}" data-say="${JP.esc(text)}"${slow ? ' data-slow="1"' : ''} aria-label="${slow ? '慢速播放' : '播放發音'}">${slow ? '<span class="slow-t">慢</span>' : ICON.speaker()}</button>`;
 
-  JP.ui = { ICON, toast, modal, closeTop, confetti, stopConfetti, speakBtn };
+  JP.ui = { ICON, toast, modal, closeTop, confetti, stopConfetti, speakBtn, syncInert };
 })();

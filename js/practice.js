@@ -17,7 +17,7 @@
   };
 
   const head = (title, desc) => `<header class="page-h"><a class="back-link" href="#/practice">‹ 練習</a><h1>${title}</h1>${desc ? `<p>${desc}</p>` : ''}</header>`;
-  const chip = (on, attr, label, extra = '') => `<button type="button" class="fchip ${on ? 'on' : ''}" ${attr}${extra}>${label}</button>`;
+  const chip = (on, attr, label, extra = '') => `<button type="button" class="fchip ${on ? 'on' : ''}" aria-pressed="${on ? 'true' : 'false'}" ${attr}${extra}>${label}</button>`;
   const section = (title) => `<h3 class="set-h"><span>${title}</span></h3>`;
 
   /* ───── 單字範圍（等級、詞性、來源） ───── */
@@ -99,7 +99,9 @@
     const [k, v] = el.dataset.qz.split(':');
     if (k === 'start' || k === 'rand') {
       const random = k === 'rand';
-      ensureBank().then((ok) => {
+      // 範圍只選 N5／N4 時不必等 N3 單字庫（離線或載入失敗時也能開始測驗）
+      const needBank = random || !qz.levels.length || qz.levels.includes('N3');
+      (needBank ? ensureBank() : Promise.resolve(true)).then((ok) => {
         if (!ok) return;
         if (!random) store.set('quiz', qz);
         V.launch(() => quizConfig(random));
@@ -189,7 +191,7 @@
   }
   function viewKana() {
     const n = kanaPool().length;
-    main().innerHTML = `<div class="page qset">${head('五十音練習', '不用先解鎖關卡，選好範圍就能無限刷題。')}
+    main().innerHTML = `<div class="page qset">${head('五十音練習', '不用先解鎖關卡，選好範圍就能不限次數地練習。')}
       <div class="seg-tabs small"><button type="button" class="${kd.script === 'hira' ? 'on' : ''}" data-kd="script:hira">あ 平假名</button><button type="button" class="${kd.script === 'kata' ? 'on' : ''}" data-kd="script:kata">ア 片假名</button></div>
       ${section('範圍')}
       <div class="chips-f">${[['basic', '清音'], ['dakuten', '濁音・半濁音'], ['yoon', '拗音']].map(([k, l]) => chip(kd.range === k, `data-kd="range:${k}"`, l)).join('')}</div>

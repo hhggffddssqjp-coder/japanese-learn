@@ -117,6 +117,44 @@ for (const mode of [true, false]) {
   const MR = m(A, R);
   if (MR.xp !== 0 || Object.keys(MR.cards).length) bad('mergeState: 重置時間較晚的一方要整份勝出（不能把舊進度併回去）');
 }
+// 第二輪審查修正的回歸測試
+{
+  // 羅馬拼音：名詞「歯」不是助詞、黏在詞後的「は」唸 wa、たくさん 不加連字號
+  const ro = (x) => JP.sentRo(x);
+  if (!/ha ga/i.test(ro('歯{は}|が|痛{いた}い|です|。'))) bad('sentRo: 名詞「歯{は}」不該被當成助詞 wa');
+  if (!/tabete wa/i.test(ro('食{た}べては|いけません|。').replace('tabetewa', 'tabete wa')) && !/tabetewa/i.test(ro('食{た}べては|いけません|。'))) bad('sentRo: 食べては 應唸 tabetewa');
+  if (/taku-san/i.test(ro('たくさん|あります|。'))) bad('sentRo: たくさん 不該加連字號');
+  if (!/tanaka-san/i.test(ro('田中{たなか}さん|は|先生{せんせい}|です|。'))) bad('sentRo: 田中さん 應為 tanaka-san');
+  // 連勝：最後學習日在未來時，不能憑空增加連勝與凍結
+  {
+    const d = (n) => { const x = new Date(); x.setDate(x.getDate() + n); return JP.dayKey(x); };
+    JP.S.lastDay = d(3); JP.S.streak = 5; JP.S.freezes = 1;
+    JP.addXP(1);
+    if (JP.S.freezes > 2 || JP.S.streak !== 5) bad(`touchDay: 最後學習日在未來時不該改變連勝或凍結（freezes ${JP.S.freezes}, streak ${JP.S.streak}）`);
+  }
+  // SRS：同一天反覆答對只升級一次
+  {
+    JP.S.cards = {};
+    for (let i = 0; i < 6; i++) JP.review('w:猫', true);
+    if (JP.S.cards['w:猫'].box !== 1) bad(`SRS: 同一天反覆答對不該一直升級（box ${JP.S.cards['w:猫'].box}）`);
+    JP.S.cards['w:猫'].due = JP.dayKey(); JP.review('w:猫', true);
+    if (JP.S.cards['w:猫'].box !== 2) bad('SRS: 到期後答對應該升級');
+    JP.S.cards = {};
+  }
+  // sanitizeState：小數、特殊鍵
+  {
+    const c = JP.sanitizeState({ xp: 1, cards: JSON.parse('{"__proto__": {"box": 3}, "w:a": {"box": 2.5, "seen": 1.7}}'), unlocked: 3.7, nodes: { n: { stars: 2.5 } } });
+    if (c.unlocked !== 3 || c.cards['w:a'].box !== 2 || c.nodes.n.stars !== 2 || Object.prototype.hasOwnProperty.call(c.cards, '__proto__')) bad('sanitizeState: 小數要取整、__proto__ 鍵要略過');
+  }
+  // mergeState：設定看 smt（設定修改時間），不是 mt
+  {
+    const m = JP.sync.mergeState;
+    const old = JP.sanitizeState({ xp: 1, mt: 9000, goal: 50, smt: 0, set: { theme: 'auto' } });
+    const set = JP.sanitizeState({ xp: 1, mt: 5000, goal: 100, smt: 4000, set: { theme: 'dark' } });
+    const r = m(old, set);
+    if (r.goal !== 100 || r.set.theme !== 'dark') bad('mergeState: 設定應以 smt 較新的一方為準');
+  }
+}
 // 輸入比對：接受各種長音寫法，但不能省略長音
 {
   const eq = (a, b) => JP.normRo(a) === JP.normRo(b);
@@ -132,3 +170,4 @@ const nWords = JP.itemList('word').length;
 console.log(`世界 ${JP.WORLDS.length}、關卡 ${JP.NODES.length}、單字 ${nWords}（含單字庫 ${JP.itemList('word').filter((w) => w.bank).length}）、文法 ${JP.GRAMMAR.length}`);
 if (problems.length) { console.log(`發現 ${problems.length} 個問題：`); problems.slice(0, 60).forEach((p) => console.log(' -', p)); process.exit(1); }
 console.log('冒煙測試通過 ✓');
+process.exit(0); // 保險：就算哪個模組留下計時器或連線，測試也要結束

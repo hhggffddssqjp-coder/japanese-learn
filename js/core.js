@@ -69,11 +69,15 @@
   const RO_PART = { は: 'wa', を: 'o', へ: 'e', では: 'dewa', には: 'niwa', とは: 'towa', へは: 'ewa' };
   function tokRo(t) {
     const r = reading(t);
-    if (RO_PART[r]) return RO_PART[r];
-    if (RO_WORD[r]) return RO_WORD[r];
+    const hasKanji = /[㐀-鿿々〆]/.test(String(t).replace(/\{[^}]*\}/g, '')); // 含漢字的詞（例：歯{は}）不是助詞
+    if (!hasKanji && RO_PART[r]) return RO_PART[r];
+    if (!hasKanji && RO_WORD[r]) return RO_WORD[r];
     let m;
     if ((m = r.match(/^(.*)(です|ます)か$/)) && r.length > 2) return (toRomaji(m[1]) + (m[2] === 'です' ? 'desu' : 'masu')).replace(/^$/, '') + ' ka';
-    if ((m = r.match(/^(.+)さん$/))) return toRomaji(m[1]) + '-san';
+    // 黏在前一個詞後面的助詞「は」唸 wa：食べては、のは、ては…
+    if ((m = r.match(/^(.*(?:て|で|に|と|の|から|まで))は$/)) && !RO_WORD[r]) return toRomaji(m[1]) + 'wa';
+    // 只有「人名＋さん」才加連字號（田中さん → tanaka-san）；たくさん、予算 等不是敬稱
+    if (/\}さん$/.test(String(t)) && (m = r.match(/^(.+)さん$/))) return toRomaji(m[1]) + '-san';
     return toRomaji(r);
   }
   function sentRo(str) {
@@ -118,29 +122,31 @@
   const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
   const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
   const numOr = (v, d, lo = 0, hi = 1e12) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+  const intOr = (v, d, lo = 0, hi = 1e12) => Math.floor(numOr(v, d, lo, hi));
+  const BAD_KEY = (k) => k === '__proto__' || k === 'constructor' || k === 'prototype';
   const dayOr = (v, d) => (typeof v === 'string' && DAY_RE.test(v) ? v : d);
   function sanitizeState(o) {
     const out = defaults();
     if (!isObj(o)) return out;
-    out.xp = numOr(o.xp, 0); out.streak = numOr(o.streak, 0); out.bestStreak = numOr(o.bestStreak, 0);
-    out.freezes = numOr(o.freezes, 1, 0, 2); out.unlocked = numOr(o.unlocked, 0, 0, 100000); out.cv = numOr(o.cv, 0, 0, 1000);
-    out.mt = numOr(o.mt, 0); out.resetAt = numOr(o.resetAt, 0);
+    out.xp = numOr(o.xp, 0); out.streak = intOr(o.streak, 0); out.bestStreak = intOr(o.bestStreak, 0);
+    out.freezes = intOr(o.freezes, 1, 0, 2); out.unlocked = intOr(o.unlocked, 0, 0, 100000); out.cv = intOr(o.cv, 0, 0, 1000);
+    out.mt = numOr(o.mt, 0); out.resetAt = numOr(o.resetAt, 0); out.smt = numOr(o.smt, 0); // smt：設定最後修改時間（同步時決定誰的設定較新）
     out.goal = [30, 50, 100].includes(o.goal) ? o.goal : 50;
     out.onboarded = !!o.onboarded;
     out.lastDay = dayOr(o.lastDay, null);
     out.frozen = Array.isArray(o.frozen) ? o.frozen.filter((k) => dayOr(k, null)).slice(-30) : [];
-    Object.entries(isObj(o.days) ? o.days : {}).forEach(([k, v]) => { if (DAY_RE.test(k)) out.days[k] = numOr(v, 0, 0, 1e7); });
+    Object.entries(isObj(o.days) ? o.days : {}).forEach(([k, v]) => { if (DAY_RE.test(k)) out.days[k] = intOr(v, 0, 0, 1e7); });
     const today = dayKey();
     Object.entries(isObj(o.cards) ? o.cards : {}).forEach(([id, c]) => {
-      if (!isObj(c) || id.length > 80) return;
-      out.cards[id] = { box: numOr(c.box, 0, 0, 7), seen: numOr(c.seen, 0), ok: numOr(c.ok, 0), ng: numOr(c.ng, 0), lapses: numOr(c.lapses, 0), due: dayOr(c.due, today), first: dayOr(c.first, today) };
+      if (!isObj(c) || id.length > 80 || BAD_KEY(id)) return;
+      out.cards[id] = { box: intOr(c.box, 0, 0, 7), seen: intOr(c.seen, 0), ok: intOr(c.ok, 0), ng: intOr(c.ng, 0), lapses: intOr(c.lapses, 0), due: dayOr(c.due, today), first: dayOr(c.first, today) };
     });
     Object.entries(isObj(o.nodes) ? o.nodes : {}).forEach(([id, p]) => {
-      if (!isObj(p) || id.length > 80) return;
-      out.nodes[id] = { stars: numOr(p.stars, 0, 0, 3), plays: numOr(p.plays, 0) };
+      if (!isObj(p) || id.length > 80 || BAD_KEY(id)) return;
+      out.nodes[id] = { stars: intOr(p.stars, 0, 0, 3), plays: intOr(p.plays, 0) };
       if (p.skipped) out.nodes[id].skipped = true;
     });
-    const stamps = (src) => { const r = {}; Object.entries(isObj(src) ? src : {}).forEach(([k, v]) => { if (k.length <= 40 && (v === true || dayOr(v, null))) r[k] = v; }); return r; };
+    const stamps = (src) => { const r = {}; Object.entries(isObj(src) ? src : {}).forEach(([k, v]) => { if (k.length <= 40 && !BAD_KEY(k) && (v === true || dayOr(v, null))) r[k] = v; }); return r; };
     out.ach = stamps(o.ach); out.stamps = stamps(o.stamps);
     const st = isObj(o.stats) ? o.stats : {};
     Object.keys(out.stats).forEach((k) => { out.stats[k] = numOr(st[k], 0); });
@@ -172,7 +178,7 @@
   const S = loadState();
   JP.S = S;
   // 換掉整份進度（匯入、同步、清除、其他分頁更新）：保留同一個物件，其他模組拿著的參照才不會失效
-  function replaceState(next) { Object.keys(S).forEach((k) => delete S[k]); Object.assign(S, sanitizeState(next)); }
+  function replaceState(next) { Object.keys(S).forEach((k) => delete S[k]); Object.assign(S, sanitizeState(next)); if (JP.recalcUnlocked) JP.recalcUnlocked(); }
   let saveTimer = 0;
   function save(opt) {
     S.mt = Date.now();
@@ -181,6 +187,19 @@
   }
   function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); }
   window.addEventListener('pagehide', () => save({ noSync: true }));
+  // 「清除這台裝置的進度」要讓其他開著的分頁一起清空，否則它們記憶體裡的舊進度會再被存回來
+  let bc = null;
+  try {
+    bc = new BroadcastChannel('jpl');
+    if (bc.unref) bc.unref(); // Node（測試）裡 BroadcastChannel 會讓程式結束不了；瀏覽器沒有這個方法
+    bc.onmessage = (e) => {
+      if (e.data !== 'clear') return;
+      replaceState(defaults());
+      try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (err) { /* 略過 */ }
+      if (JP.views) { JP.views.applyTheme(); JP.views.refresh(); }
+    };
+  } catch (e) { /* 舊瀏覽器沒有 BroadcastChannel */ }
+  JP.broadcastClear = () => { try { if (bc) bc.postMessage('clear'); } catch (e) { /* 略過 */ } };
   // 另一個分頁存了進度：合併進來，避免後存的分頁蓋掉先存的
   window.addEventListener('storage', (e) => {
     if (e.key !== KEY || !e.newValue) return;
@@ -226,11 +245,12 @@
     if (!S.lastDay) S.streak = 1;
     else {
       const gap = daysBetween(S.lastDay, today);
+      if (gap <= 0) return { first: false, froze: 0 }; // 最後學習日在「未來」（時區或時鐘調整）：視為今天已計過，不增加連勝與凍結
       if (gap === 1) S.streak++;
       else {
         const missed = gap - 1;
         if (missed <= S.freezes) {
-          S.freezes -= missed; froze = missed;
+          S.freezes = Math.max(0, S.freezes - missed); froze = missed;
           for (let i = 1; i <= missed; i++) S.frozen.push(addDays(S.lastDay, i));
           S.frozen = S.frozen.slice(-30);
           S.streak++;
@@ -267,11 +287,14 @@
     const today = dayKey();
     let c = S.cards[id];
     if (!c) c = S.cards[id] = { box: 0, due: today, seen: 0, ok: 0, ng: 0, lapses: 0, first: today };
+    const promote = c.seen === 0 || c.due <= today; // 新卡或到期才升級；同一天反覆練習不會把熟練度灌高
     c.seen++;
     if (ok) {
       c.ok++;
-      c.box = Math.min(MAX_BOX, c.box + 1);
-      c.due = addDays(today, INTERVALS[c.box]);
+      if (promote) {
+        c.box = Math.min(MAX_BOX, c.box + 1);
+        c.due = addDays(today, INTERVALS[c.box]);
+      }
     } else {
       c.ng++; c.lapses++;
       c.box = Math.max(0, c.box - 2);
@@ -319,7 +342,7 @@
     },
     list() { return voices; },
     current() { return voices.find((v) => v.name === S.set.voice) || voices[0] || null; },
-    cancel() { try { if (au) au.pause(); } catch (e) { /* 略過 */ } if (hasTTS) speechSynthesis.cancel(); },
+    cancel() { stopPlay(); try { if (au) au.pause(); } catch (e) { /* 略過 */ } if (hasTTS) speechSynthesis.cancel(); },
     // 預錄高品質語音（audio/manifest.json 存在時啟用）
     manifest: null,
     hq() { return !!(tts.manifest && S.set.hq !== false); },
@@ -379,26 +402,39 @@
   // 共用同一個 <audio>，iOS 解鎖一次後就能一直使用
   let au = null;
   function audioEl() { if (!au) { au = new Audio(); au.preload = 'auto'; } return au; }
+  // 同一時間只有一個「目前的播放」：新的播放開始時，舊的視為被取代（回傳 true，不會退回裝置語音）
+  let curPlay = null;
+  function stopPlay() { if (curPlay) curPlay.fin(true); }
   function playFile(file) {
+    stopPlay();
     return new Promise((resolve) => {
       const a = audioEl();
-      let done = false;
-      const fin = (r) => { if (!done) { done = true; a.onended = a.onerror = null; resolve(r); } };
-      // 用 fetch 取得完整檔案再播：Service Worker 看到的是一般請求（沒有 Range），離線快取才能運作
-      let url = '';
-      const cleanup = () => { if (url) { URL.revokeObjectURL(url); url = ''; } };
-      const end = (r) => { cleanup(); fin(r); };
-      a.onended = () => end(true);
-      a.onerror = () => end(false);
+      let done = false, url = '', timer = 0;
+      const play = {
+        fin(r) {
+          if (done) return;
+          done = true; clearTimeout(timer);
+          if (curPlay === play) curPlay = null;
+          if (a.onended === onEnded) a.onended = null;
+          if (a.onerror === onError) a.onerror = null;
+          if (url) { URL.revokeObjectURL(url); url = ''; }
+          resolve(r);
+        },
+      };
+      const onEnded = () => play.fin(true);
+      const onError = () => play.fin(false);
+      curPlay = play;
+      a.onended = onEnded; a.onerror = onError;
       try { if (hasTTS) speechSynthesis.cancel(); } catch (e) { /* 略過 */ }
+      // 用 fetch 取得完整檔案再播：Service Worker 看到的是一般請求（沒有 Range），離線快取才能運作
       fetch('audio/' + file).then((r) => (r.ok ? r.blob() : Promise.reject(new Error('audio ' + r.status)))).then((blob) => {
         if (done) return;
         url = URL.createObjectURL(blob);
         a.src = url;
         const pr = a.play();
-        if (pr && pr.catch) pr.catch(() => end(false));
-      }).catch(() => end(false));
-      setTimeout(() => end(false), 12000);
+        if (pr && pr.catch) pr.catch(() => play.fin(false));
+      }).catch(() => play.fin(false));
+      timer = setTimeout(() => play.fin(false), 12000);
     });
   }
   if (hasTTS) {

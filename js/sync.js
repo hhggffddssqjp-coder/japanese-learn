@@ -46,6 +46,11 @@
     Object.keys(out.ach).forEach((k) => { const x = (a.ach || {})[k], y = (b.ach || {})[k]; if (x && y) out.ach[k] = x < y ? x : y; });
     out.stamps = Object.assign({}, b.stamps || {}, a.stamps || {});
     out.cv = Math.max(num(a.cv), num(b.cv));
+    // 每日目標與設定：以「設定最後修改時間 smt」較新的一方為準（不看 mt：每次存檔、關閉分頁都會更新 mt，會讓只是開著的裝置蓋掉真正的設定）
+    const sa = num(a.smt), sb = num(b.smt);
+    const sNew = sa !== sb ? (sa > sb ? a : b) : newer;
+    out.goal = sNew.goal; out.set = JSON.parse(JSON.stringify(sNew.set || {}));
+    out.smt = Math.max(sa, sb);
     out.resetAt = ra;
     out.uid = a.uid || b.uid || undefined;
     if (out.uid === undefined) delete out.uid;
@@ -79,8 +84,10 @@
     set('loading');
     initP = (async () => {
       try {
-        if (!window.firebase) for (const src of FB_SCRIPTS) await loadScript(src);
-        window.firebase.initializeApp(cfg);
+        // 逐一確認需要的模組都載入了（只載入一半時重試要補載，不能直接放棄）
+        const have = [() => window.firebase, () => window.firebase && typeof window.firebase.auth === 'function', () => window.firebase && typeof window.firebase.firestore === 'function'];
+        for (let i = 0; i < FB_SCRIPTS.length; i++) if (!have[i]()) await loadScript(FB_SCRIPTS[i]);
+        if (!(window.firebase.apps && window.firebase.apps.length)) window.firebase.initializeApp(cfg);
         auth = window.firebase.auth();
         db = window.firebase.firestore();
         auth.onAuthStateChanged(async (u) => {
@@ -132,6 +139,8 @@
           applyToLocal(merged);
           JP.save({ noSync: true });
           if (JP.views) { JP.views.applyTheme(); JP.views.refresh(); }
+          // 雲端帶回了單字庫的進度：把單字庫載入，複習清單與成就才算得到這些字
+          if (JP.bank) JP.bank.LEVELS.forEach((l) => { if (JP.bank.hasProgress(l.id)) JP.bank.load(l.id).then(() => JP.views && JP.views.refresh()).catch(() => {}); });
         }
       }
       sync.last = Date.now();
@@ -141,11 +150,17 @@
   }
 
   const MAX_STATE = 850000; // Firestore 單一文件上限約 1MB，留一點空間
-  async function push() {
+  const sameState = (x, y) => { const c = (o) => { const z = JSON.parse(JSON.stringify(o)); delete z.mt; return JSON.stringify(z); }; return c(x) === c(y); };
+  let pushP = null;
+  function push() {
     pushTimer = 0;
-    if (!sync.user) return;
-    if (pushing) { pendingPush = true; return; }
+    if (!sync.user) return Promise.resolve();
+    if (pushing) { pendingPush = true; return pushP || Promise.resolve(); }
     pushing = true;
+    pushP = doPush();
+    return pushP;
+  }
+  async function doPush() {
     try {
       if (JSON.stringify(S).length > MAX_STATE) throw Object.assign(new Error('too big'), { code: 'state-too-big' });
       // 先讀雲端、合併、再寫回：兩台裝置同時使用時，不會用舊進度蓋掉另一台的進度
@@ -159,7 +174,14 @@
         merged.uid = sync.user.uid;
         tx.set(ref, { state: JSON.stringify(merged), mt: merged.mt || Date.now(), v: 1, updated: Date.now() });
       });
-      if (merged) { applyToLocal(merged); JP.save({ noSync: true }); }
+      if (merged) {
+        // 上傳期間使用者可能又答了題：用「現在的進度」再合併一次，不能直接用上傳當下的快照蓋掉；
+        // 如果合併後和已上傳的內容不同，就再排一次上傳
+        const next = mergeState(JSON.parse(JSON.stringify(S)), merged);
+        const changed = !sameState(next, merged);
+        applyToLocal(next);
+        JP.save({ noSync: !changed });
+      }
       sync.last = Date.now();
       set('idle');
     } catch (e) { set('error', e && e.code === 'state-too-big' ? '進度資料太大，無法同步到雲端，請先匯出備份並回報問題' : friendly(e)); }
@@ -190,7 +212,8 @@
     }
   };
   sync.signOut = async () => { if (auth) { await auth.signOut(); } flag(false); };
-  sync.flush = () => push();
+  // 把進度存到雲端；回傳是否成功（登出前用來確認進度真的上傳了）
+  sync.flush = async () => { clearTimeout(pushTimer); if (pushP) { try { await pushP; } catch (e) { /* 略過 */ } } await push(); return sync.status !== 'error'; };
   sync.now = async () => { if (!sync.user) return; set('syncing'); await pull(true); };
   // 清除進度時一併清掉雲端，避免被舊資料還原
   // 寫入「已重置」的空進度（帶 resetAt），其他裝置同步時會整份採用它，不會把舊進度推回來；回傳是否成功
@@ -208,7 +231,7 @@
     if (document.hidden) { if (sync.user && pushTimer) { clearTimeout(pushTimer); push(); } }
     else if (sync.user && Date.now() - lastPull > 60000 && !document.querySelector('.overlay.open')) pull(false);
   });
-  window.addEventListener('online', () => { if (sync.user) pull(true); });
+  window.addEventListener('online', () => { if (sync.user) pull(true); else if (hasFlag() && !auth) init(); });
 
   if (hasFlag()) init(); else { sync.ready = true; set('signedout'); }
 })();

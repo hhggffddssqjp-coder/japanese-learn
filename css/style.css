@@ -1,7 +1,8 @@
 /* にほんご冒險 — 和紙 × 朱印 × 闖關地圖 */
 :root {
-  --paper: #f6efe2; --paper-2: #eee3cf; --card: #fffaf1; --ink: #2b2621; --muted: #7b6f62; --line: #e4d7bf; --line-d: #d3c3a5;
+  --paper: #f6efe2; --paper-2: #eee3cf; --card: #fffaf1; --ink: #2b2621; --muted: #6a5e51; --line: #e4d7bf; --line-d: #d3c3a5;
   --shu: #e2452f; --shu-d: #b5301d; --shu-soft: #fde5de;
+  --btn: #c93a25; --btn-d: #9e2c1b; /* 按鈕底色：白字對比 ≥ 5:1（--shu 只有 4.1） */
   --ai: #2f4c80; --ai-d: #213862; --ai-soft: #dfe7f5;
   --kin: #f0b429; --kin-d: #bb8412; --kin-soft: #fcefc8;
   --ok: #5aa33d; --ok-d: #3f7d28; --ok-soft: #e4f4d8;
@@ -17,6 +18,7 @@
 :root[data-theme="dark"] {
   --paper: #18161d; --paper-2: #211e28; --card: #262330; --ink: #f2eadc; --muted: #a99f90; --line: #3a3544; --line-d: #4a4455;
   --shu: #f0634c; --shu-d: #bd3a27; --shu-soft: #3d2420;
+  --btn: #bd3a27; --btn-d: #8f2a1b;
   --ai: #8fb0f0; --ai-d: #5f7fc4; --ai-soft: #25304a;
   --kin: #f3c14f; --kin-d: #b88a1c; --kin-soft: #3d3419;
   --ok: #6dc24b; --ok-d: #468a2c; --ok-soft: #22351d;
@@ -29,6 +31,7 @@
   :root:not([data-theme="light"]) {
     --paper: #18161d; --paper-2: #211e28; --card: #262330; --ink: #f2eadc; --muted: #a99f90; --line: #3a3544; --line-d: #4a4455;
     --shu: #f0634c; --shu-d: #bd3a27; --shu-soft: #3d2420;
+  --btn: #bd3a27; --btn-d: #8f2a1b;
     --ai: #8fb0f0; --ai-d: #5f7fc4; --ai-soft: #25304a;
     --kin: #f3c14f; --kin-d: #b88a1c; --kin-soft: #3d3419;
     --ok: #6dc24b; --ok-d: #468a2c; --ok-soft: #22351d;
@@ -129,7 +132,7 @@ main { max-width: 760px; margin: 0 auto; padding: 16px 16px calc(96px + env(safe
 
 /* ───── 按鈕 ───── */
 .btn {
-  --b: var(--shu); --bd: var(--shu-d); --bt: #fff;
+  --b: var(--btn, var(--shu)); --bd: var(--btn-d, var(--shu-d)); --bt: #fff;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 16px; background: var(--b); color: var(--bt);
   font-weight: 900; letter-spacing: .04em; padding: 12px 22px; box-shadow: 0 4px 0 var(--bd); transition: transform .08s, box-shadow .08s, filter .15s; position: relative; top: 0;
   font-size: 1rem; line-height: 1.2;
@@ -552,3 +555,24 @@ button.banner { cursor: pointer; transition: transform .12s; } button.banner:hov
 .h1-em { margin-right: 8px; } .ph-tabs { flex-wrap: nowrap; overflow-x: auto; } .ph-tabs .fchip { text-decoration: none; white-space: nowrap; }
 .plines { margin-top: 4px; } .pline { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px 0; border-top: 2px solid var(--line); } .pline:first-child { border-top: 0; } .pl-say { display: flex; gap: 6px; } .pl-note { color: var(--muted); font-size: .8rem; margin-top: 3px; }
 .rv-note { margin-top: 6px; color: var(--muted); font-size: .85rem; }
+
+/* ───── 無障礙與效能微調（第二輪審查） ───── */
+/* 小螢幕（≤380px）頂端列：招牌不換行，省下空間 */
+@media (max-width: 380px) { .brand-t { white-space: nowrap; font-size: .95rem; } .brand-t small { display: none; } .topbar .chip-bar { display: none; } .brand { min-width: 0; } }
+/* 世界標題：白字在橘／粉／金底對比不足，加一層暗色漸層 */
+.world-head::before { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, .26); pointer-events: none; } .world-head > * { position: relative; }
+.wh-txt h2, .wh-txt p { text-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
+/* 觸控目標至少 44px：小元件用偽元素放大點擊範圍，不改變版面 */
+.fchip, .seg-tabs button, .btn-sm, .skip-link { min-height: 44px; }
+.page-h .back-link { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 4px; }
+.spk, .icon-btn, .modal-x { position: relative; } .spk::after, .icon-btn::after, .modal-x::after { content: ""; position: absolute; inset: -6px; }
+/* 日文不要在詞中間斷行；篩選列右側淡出，提示可以橫向捲動 */
+[lang="ja"], .wh-txt h2, .pf-main h1 { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.tile { white-space: nowrap; }
+.chips-f { -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent); mask-image: linear-gradient(90deg, #000 90%, transparent); padding-right: 16px; }
+/* 長清單只渲染看得到的部分（圖鑑與學習地圖約快 2～4 倍） */
+.dex-lesson { content-visibility: auto; contain-intrinsic-size: auto 330px; } .world { content-visibility: auto; contain-intrinsic-size: auto 900px; }
+/* 單字庫的組別星星改用文字，少約 2,000 個 DOM 節點 */
+.bgrp .bs { font-size: .72rem; letter-spacing: 1px; color: var(--line-d); line-height: 1; } .bgrp .bs b { color: #f2b01e; font-weight: 400; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; padding: 0; }
+.dtile.locked { cursor: default; }

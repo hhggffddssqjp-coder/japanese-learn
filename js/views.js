@@ -107,7 +107,7 @@
     const intro = !S.stats.lessons && !JP.stateOf(JP.NODES[0]).done && JP.currentNode().world === 'intro'
       ? `<div class="card banner tip"><span class="bn-ico">🐱</span><div><b>第一次學日語？跟著地圖走就好</b><small>從「認識日語文字」開始，每關約 3 分鐘，答錯也沒關係。</small></div></div>` : '';
     const rail = `<aside class="rail">${levelCard()}${goalCard()}${streakCard()}</aside>`;
-    main().innerHTML = `<div class="learn">${rail}<div class="map-col">${intro}${voiceBanner()}${reviewBanner()}${JP.WORLDS.map(worldHtml).join('')}<div class="map-end"><p>🗻 更多關卡正在路上…</p></div></div></div>`;
+    main().innerHTML = `<h1 class="sr-only">學習地圖</h1><div class="learn">${rail}<div class="map-col">${intro}${voiceBanner()}${reviewBanner()}${JP.WORLDS.map(worldHtml).join('')}<div class="map-end"><p>🗻 更多關卡正在路上…</p></div></div></div>`;
     const cur = main().querySelector('.node.current');
     if (cur && !viewLearn.shown) setTimeout(() => cur.scrollIntoView({ block: 'center', behavior: 'instant' }), 30);
     viewLearn.shown = true;
@@ -116,6 +116,11 @@
 
   /* ───────────── 啟動關卡 ───────────── */
   async function launch(factory) {
+    if (launch.busy) return; // 長按 Enter 或快速連點會重複啟動，已經有一場進行中就忽略
+    launch.busy = true;
+    try { await launchLoop(factory); } finally { launch.busy = false; }
+  }
+  async function launchLoop(factory) {
     for (;;) {
       const cfg = factory();
       if (!cfg) return;
@@ -189,8 +194,9 @@
     const got = words.filter((w) => S.cards[w.id]).length;
     const kana = JP.itemList('kana');
     const gotK = kana.filter((k) => S.cards[k.id]).length;
-    const tabs = `<div class="seg-tabs" role="tablist"><button type="button" role="tab" class="${dexState.tab === 'word' ? 'on' : ''}" data-dtab="word">單字圖鑑 <small>${got}/${words.length}</small></button><button type="button" role="tab" class="${dexState.tab === 'kana' ? 'on' : ''}" data-dtab="kana">假名表 <small>${gotK}/${kana.length}</small></button></div>`;
-    main().innerHTML = `<div class="page dex"><header class="page-h"><h1>圖鑑</h1><p>每學會一個單字，就會點亮一張圖卡。</p></header>${tabs}<div id="dex-body"></div></div>`;
+    const tabs = `<div class="seg-tabs" role="tablist"><button type="button" role="tab" aria-selected="${dexState.tab === 'word'}" class="${dexState.tab === 'word' ? 'on' : ''}" data-dtab="word">單字圖鑑 <small>${got}/${words.length}</small></button><button type="button" role="tab" aria-selected="${dexState.tab === 'kana'}" class="${dexState.tab === 'kana' ? 'on' : ''}" data-dtab="kana">假名表 <small>${gotK}/${kana.length}</small></button></div>`;
+    main().innerHTML = `<div class="page dex"><header class="page-h"><h1>圖鑑</h1><p>每學會一個單字，就會點亮一張圖卡。</p></header>${tabs}<div id="dex-tools"></div><div id="dex-body"></div></div>`;
+    renderDexTools();
     renderDexBody();
   }
 
@@ -213,16 +219,24 @@
     }).join('');
     return `<p class="srch-n">找到 ${all.length} 個單字${all.length > shown.length ? `，顯示前 ${shown.length} 個` : ''}${bankLoaded ? '' : '（單字庫載入中…）'}</p><div class="srows">${rows || '<div class="empty"><div>🔍</div><p>找不到符合的單字</p></div>'}</div>`;
   }
+  function dexToolsHtml() {
+    const filters = [['all', '全部'], ['got', '已收集'], ['todo', '未收集'], ['weak', '需加強']];
+    return `<div class="dex-tools"><input id="dex-q" class="search" type="search" placeholder="搜尋日文、中文或羅馬拼音" value="${esc(dexState.q)}" aria-label="搜尋單字"><div class="chips-f">${filters.map(([k, l]) => `<button type="button" class="fchip ${dexState.filter === k ? 'on' : ''}" aria-pressed="${dexState.filter === k}" data-dfilter="${k}">${l}</button>`).join('')}</div>
+      <div class="chips-f">${[['all', '所有級別'], ['N5', 'N5'], ['N4', 'N4'], ['N3', 'N3'], ['N2', 'N2'], ['N1', 'N1']].map(([k, l]) => `<button type="button" class="fchip ${dexState.lv === k ? 'on' : ''}" aria-pressed="${dexState.lv === k}" data-dlv="${k}">${l}</button>`).join('')}</div>
+      <div class="chips-f">${[['all', '所有詞性'], ['名詞', '名詞'], ['動詞', '動詞'], ['形容詞', '形容詞'], ['副詞', '副詞']].map(([k, l]) => `<button type="button" class="fchip ${dexState.pos === k ? 'on' : ''}" aria-pressed="${dexState.pos === k}" data-dpos="${k}">${l}</button>`).join('')}</div></div>`;
+  }
+  function renderDexTools() {
+    const el = document.getElementById('dex-tools');
+    if (el) el.innerHTML = dexState.tab === 'kana' ? '' : dexToolsHtml();
+  }
   function renderDexBody() {
     const el = document.getElementById('dex-body');
     if (!el) return;
     if (dexState.tab === 'kana') { el.innerHTML = kanaTables(); return; }
     const q = dexState.q.trim().toLowerCase();
-    const filters = [['all', '全部'], ['got', '已收集'], ['todo', '未收集'], ['weak', '需加強']];
-    let html = `<div class="dex-tools"><input id="dex-q" class="search" type="search" placeholder="搜尋日文、中文或羅馬拼音" value="${esc(dexState.q)}" aria-label="搜尋單字"><div class="chips-f">${filters.map(([k, l]) => `<button type="button" class="fchip ${dexState.filter === k ? 'on' : ''}" data-dfilter="${k}">${l}</button>`).join('')}</div>
-      <div class="chips-f">${[['all', '所有級別'], ['N5', 'N5'], ['N4', 'N4'], ['N3', 'N3'], ['N2', 'N2'], ['N1', 'N1']].map(([k, l]) => `<button type="button" class="fchip ${dexState.lv === k ? 'on' : ''}" data-dlv="${k}">${l}</button>`).join('')}</div>
-      <div class="chips-f">${[['all', '所有詞性'], ['名詞', '名詞'], ['動詞', '動詞'], ['形容詞', '形容詞'], ['副詞', '副詞']].map(([k, l]) => `<button type="button" class="fchip ${dexState.pos === k ? 'on' : ''}" data-dpos="${k}">${l}</button>`).join('')}</div></div>`;
-    if (q) { el.innerHTML = html + dexSearch(q); const inp0 = document.getElementById('dex-q'); if (inp0 && document.activeElement && document.activeElement.id === 'dex-q') inp0.setSelectionRange(inp0.value.length, inp0.value.length); return; }
+    const weakSet = new Set(JP.weakIds());
+    let html = '';
+    if (q) { el.innerHTML = dexSearch(q); return; }
     let any = false;
     JP.WORLDS.filter((w) => w.nodes.some((n) => n.lesson)).forEach((w) => {
       const blocks = w.nodes.filter((n) => n.lesson).map((n) => {
@@ -232,7 +246,7 @@
           const c = S.cards[it.id];
           if (dexState.filter === 'got' && !c) return false;
           if (dexState.filter === 'todo' && c) return false;
-          if (dexState.filter === 'weak' && !(c && (c.ng > c.ok || c.box <= 1))) return false;
+          if (dexState.filter === 'weak' && !weakSet.has(it.id)) return false;
           if (dexState.lv !== 'all' && it.lv !== dexState.lv) return false;
           if (dexState.pos !== 'all' && !it.pos.includes(dexState.pos)) return false;
           if (q) return c && (it.jp.includes(q) || it.rd.includes(q) || it.zh.toLowerCase().includes(q) || it.ro.includes(q));
@@ -244,15 +258,13 @@
         return `<div class="dex-lesson"><h3><span>${l.em}</span>${esc(l.title)}<small>${esc(l.zh)}・${gotN}/${l.words.length}</small></h3><div class="dex-grid">${ws.map((it) => {
           const c = S.cards[it.id];
           return c ? `<button type="button" class="dtile got" data-word="${esc(it.id)}"><span class="dt-pic">${it.em}</span><b lang="ja">${esc(it.jp)}</b><small>${esc(it.zh)}</small>${boxDots(c.box)}</button>`
-            : `<button type="button" class="dtile locked" data-lock="${esc(n.id)}" aria-label="未收集"><span class="dt-pic">${it.em}</span><b>？？？</b><small>${esc(l.title)}</small></button>`;
+            : `<button type="button" class="dtile locked" data-lock="${esc(n.id)}" tabindex="-1" aria-hidden="true"><span class="dt-pic">${it.em}</span><b>？？？</b><small>${esc(l.title)}</small></button>`;
         }).join('')}</div></div>`;
       }).join('');
       if (blocks) html += `<section class="dex-world w-${w.theme}"><h2><span>${w.em}</span>${esc(w.title)} <small>${esc(w.zh)}</small></h2>${blocks}</section>`;
     });
     if (!any) html += `<div class="empty"><div>🔍</div><p>${q ? '找不到符合的單字' : '這裡還是空的，去闖關收集吧！'}</p></div>`;
     el.innerHTML = html;
-    const inp = document.getElementById('dex-q');
-    if (inp && document.activeElement && document.activeElement.id === 'dex-q') inp.setSelectionRange(inp.value.length, inp.value.length);
   }
 
   const KANA_GRID = {
@@ -319,13 +331,14 @@
     if (kind === 'listen') {
       if (!Q.canListen()) { toast('這個裝置找不到日語語音，無法進行聽力特訓'); return null; }
       const qs = [];
-      ids.forEach((id) => {
+      for (const id of ids) {
+        if (qs.length >= 12) break; // 只要 12 題，不必替每個已學項目都出題
         const it = JP.item(id);
         const subs = it.kind === 'kana' ? ['listen2kana'] : ['listen2jp', 'listen2pic'];
         const q = Q.build(it, JP.pick(subs)) || Q.build(it, subs[0]);
         if (q) qs.push(q);
-      });
-      if (qs.length < 3) { toast('已學項目還不夠，先去闖關吧'); return null; }
+      }
+      if (qs.length < 3) { toast('學過的內容還不夠，先去闖關吧'); return null; }
       return { kind: 'listen', title: '聽力特訓', questions: qs.slice(0, 12) };
     }
     return { kind, title: kind === 'weak' ? '弱點加強' : '每日複習', questions: Q.planReview(ids, 12) };
@@ -352,7 +365,7 @@
         ${card('p-blitz', '⚡', '閃電挑戰', '60 秒內盡量多答對，挑戰個人紀錄', `<b>${S.stats.blitz}</b>最佳紀錄`, 'blitz', learned < 6)}
         ${card('p-quiz', '📝', '自訂測驗', '選範圍、題型、題數、生命與時間限制', '自由設定', 'quiz', false)}
         ${card('p-cards', '🃏', '單字卡', '隨機翻卡瀏覽，查看例句與同主題單字', '不計分', 'cards', false)}
-        ${card('p-kana', 'あ', '五十音練習', '自選平／片假名與範圍，無限刷題', '不用解鎖', 'kana', false)}
+        ${card('p-kana', 'あ', '五十音練習', '自選平／片假名與範圍，不限次數地練習', '不用解鎖', 'kana', false)}
         ${card('p-phr', '💬', '情境會話', '日常會話與旅遊常用句，共 14 個情境、210 句', '有發音', 'phrases', false)}
         ${card('p-bank', '📚', '單字庫・N3', '約 2,000 個 N3 單字，沒有圖片，直接背', '<b>N3</b>開放', 'bank', false)}
         ${card('p-place', '🧭', '程度測驗', '12 題判斷你的程度，並調整起點', '2 分鐘', 'placement', false)}
@@ -380,7 +393,7 @@
     const cur = gs.find((g) => !((S.nodes[g.id] || {}).stars > 0));
     const cells = gs.map((g, i) => {
       const st = (S.nodes[g.id] || {}).stars || 0;
-      return `<button type="button" class="bgrp ${st ? 'done' : ''} ${cur === g ? 'current' : ''}" data-bank="${esc(g.id)}" aria-label="第 ${i + 1} 組，${st} 顆星"><b>${i + 1}</b><span>${[0, 1, 2].map((k) => `<i class="${k < st ? 'on' : ''}">${ICON.star()}</i>`).join('')}</span></button>`;
+      return `<button type="button" class="bgrp ${st ? 'done' : ''} ${cur === g ? 'current' : ''}" data-bank="${esc(g.id)}" aria-label="第 ${i + 1} 組，${st} 顆星"><b>${i + 1}</b><span class="bs" aria-hidden="true"><b>${'★'.repeat(st)}</b>${'★'.repeat(3 - st)}</span></button>`;
     }).join('');
     main().innerHTML = `<div class="page wbank">${head}
       <p class="bank-note">⚠️ JLPT 沒有官方單字表，級別是社群整理的，僅供參考；中文釋義與例句由 AI 撰寫，可能有誤，建議搭配辭典確認。</p>
@@ -414,7 +427,7 @@
       <p class="freeze">❄️ 連勝凍結 ×${S.freezes}：漏學一天時會自動使用，連續 7 天可獲得 1 個（最多 2 個）</p>
       <section class="card"><h3>學習統計</h3><div class="stat-grid">
         <div><b>${learnedW}</b><span>已收集單字</span></div><div><b>${learnedK}</b><span>已學假名</span></div>
-        <div><b>${S.stats.lessons}</b><span>通過關卡</span></div><div><b>${acc}%</b><span>整體正確率</span></div>
+        <div><b>${S.stats.lessons}</b><span>完成關卡</span></div><div><b>${acc}%</b><span>整體正確率</span></div>
         <div><b>${S.bestStreak}</b><span>最長連勝（天）</span></div><div><b>${S.stats.bestCombo}</b><span>最高連擊</span></div></div></section>
       <section class="card"><h3>朱印帳 <small class="muted">通關每個世界的鬼關，蓋下一枚朱印</small></h3><div class="stamps">${stamps}</div></section>
       <section class="card"><h3>成就 <small class="muted">${Object.keys(S.ach).length} / ${JP.ACH.length}</small></h3><div class="achs">${ach}</div></section>
@@ -479,7 +492,7 @@
     else toast('🔊 播放中…（聽不到的話，請看下方「沒有聲音？」）');
     const ok = await JP.tts.speak('こんにちは。にほんごを べんきょう しましょう。');
     const err = JP.tts.lastError;
-    if (!ok && err && !/cancel|interrupt/i.test(err)) toast(`播放失敗（${esc(err)}）。請確認音量、靜音開關，或換一個語音`, 4500);
+    if (!ok && err && !/cancel|interrupt/i.test(err)) toast(`播放失敗（${err}）。請確認音量、靜音開關，或換一個語音`, 4500);
   }
 
   function exportData() {
@@ -493,15 +506,25 @@
   function importData(file) {
     const fr = new FileReader();
     fr.onload = () => {
+      let o;
       try {
-        const o = JSON.parse(fr.result);
+        o = JSON.parse(fr.result);
         if (!o || typeof o.xp !== 'number' || typeof o.cards !== 'object') throw new Error('bad');
+      } catch (e) { toast('檔案格式不正確'); return; }
+      const clean = JP.sanitizeState(o); // 清洗欄位，擋掉型別錯誤與夾帶的內容
+      const sum = (st) => `Lv ${JP.levelInfo(st.xp).level}・${st.xp} XP・收集 ${Object.keys(st.cards).length} 個項目・連勝 ${st.streak} 天`;
+      // 匯入會取代目前的進度：先讓使用者看到差異並確認
+      const m = modal(`<div class="confirm"><h3>匯入備份？</h3><p>這會<b>取代</b>這台裝置目前的進度。<br><br>目前：${esc(sum(S))}<br>備份檔：${esc(sum(clean))}</p><div class="btn-row"><button type="button" class="btn btn-big" data-close>取消</button><button type="button" class="btn btn-ghost danger" data-act="yes">取代並匯入</button></div></div>`);
+      m.el.querySelector('[data-act="yes"]').addEventListener('click', () => {
+        m.close();
+        try { localStorage.setItem('jpl.backup', JSON.stringify(S)); } catch (e) { /* 略過 */ } // 保留匯入前的進度一份，誤按時可以手動救回
         const voice = S.set.voice;
-        JP.replaceState(o); // 清洗欄位，擋掉型別錯誤與夾帶的內容
+        JP.replaceState(clean);
         S.set.voice = voice; // 語音是裝置專屬設定
+        S.smt = Date.now();
         if (JP.sync && JP.sync.user) S.uid = JP.sync.user.uid; else delete S.uid; // 匯入的進度歸現在的帳號所有
         JP.save(); applyTheme(); toast('匯入完成'); refresh(); updateChips();
-      } catch (e) { toast('檔案格式不正確'); }
+      });
     };
     fr.readAsText(file);
   }
@@ -513,7 +536,7 @@
         const ok = await JP.sync.wipe(ts);
         if (!ok) { toast('目前無法清除雲端備份，請確認網路後再試'); return; }
       }
-      clearLocal(ts);
+      clearLocal(JP.sync && JP.sync.user ? ts : 0); // 沒登入時不記重置時間，否則之後登入會讓這份空進度蓋掉雲端
     });
   }
   // 清掉這台裝置上的進度與偏好；先把記憶體裡的進度換成空白，否則 pagehide 會把舊進度寫回去
@@ -522,11 +545,19 @@
     if (ts) S.resetAt = ts;
     try { Object.keys(localStorage).filter((k) => k.startsWith('jpl.') && k !== 'jpl.signedIn').forEach((k) => localStorage.removeItem(k)); } catch (e) { /* 略過 */ }
     try { localStorage.setItem('jpl.v2', JSON.stringify(S)); } catch (e) { /* 略過 */ }
+    if (JP.broadcastClear) JP.broadcastClear(); // 通知其他開著的分頁一併清空，否則它們的舊進度會被存回來
     location.reload();
   }
   // 登出：先把進度存到雲端，再問要不要清掉這台裝置上的進度（共用電腦時避免進度混在一起）
   async function signOutFlow() {
-    try { if (JP.sync.flush) await JP.sync.flush(); } catch (e) { /* 略過 */ }
+    let synced = true;
+    try { synced = JP.sync.flush ? await JP.sync.flush() : true; } catch (e) { synced = false; }
+    if (!synced) {
+      // 進度沒有成功上傳（可能離線）：登出後這些進度只會留在這台裝置，要讓使用者知道
+      const ask = modal(`<div class="confirm"><h3>進度還沒上傳到雲端</h3><p>目前連不上雲端，最近的進度只存在這台裝置上。現在登出的話，這些進度要等下次登入並同步後才會備份。</p><div class="btn-row"><button type="button" class="btn btn-big" data-close>先不登出</button><button type="button" class="btn btn-ghost danger" data-act="signout-anyway">仍要登出</button></div></div>`);
+      ask.el.querySelector('[data-act="signout-anyway"]').addEventListener('click', async () => { ask.close(); await JP.sync.signOut(); toast('已登出；進度仍保留在這台裝置上'); });
+      return;
+    }
     await JP.sync.signOut();
     const m = modal(`<div class="confirm"><h3>已登出</h3><p>要一併清除這台裝置上的進度嗎？如果這是共用的電腦，建議清除，下一位使用者就不會看到你的進度。進度已經保存在雲端，下次登入會還原。</p><div class="btn-row"><button type="button" class="btn btn-big" data-close>保留在這台裝置</button><button type="button" class="btn btn-ghost danger" data-act="clearlocal">清除這台裝置的進度</button></div></div>`);
     m.el.querySelector('[data-act="clearlocal"]').addEventListener('click', () => clearLocal(0));
@@ -544,6 +575,7 @@
   function showWelcome(opts = {}) {
     if (JP.sync && JP.sync.enabled && !JP.sync.user && JP.sync.preload) JP.sync.preload();
     const root = document.getElementById('overlay');
+    root.setAttribute('aria-label', '歡迎');
     const levels = [
       ['intro', '🌱', '連五十音都不會', '從零開始：先認識文字，每關只學 2～5 個字'],
       ['hira', '🌿', '認識一點假名', '跳過入門，從平假名開始複習'],
@@ -553,6 +585,7 @@
     ];
     let lvl = 'intro', goal = S.goal || 50;
     root.className = 'overlay open k-welcome';
+    setTimeout(() => { const f = root.querySelector('.lvl-opt.on'); if (f) f.focus({ preventScroll: true }); }, 80); // 鍵盤與螢幕閱讀器使用者一開啟就在歡迎畫面內
     document.body.classList.add('noscroll');
     root.innerHTML = `<div class="welcome"><div class="wel-in">
       <div class="wel-mascot" aria-hidden="true">🐱</div>
@@ -575,6 +608,7 @@
       else if (b.dataset.act === 'cancel') close();
       else if (b.dataset.act === 'signin') {
         await JP.sync.signIn();
+        if (!JP.sync.user && JP.sync.status !== 'syncing') return; // 尚未載入完成或使用者關掉了登入視窗：不要說已登入
         const t0 = Date.now();
         while (JP.sync.status === 'syncing' && Date.now() - t0 < 15000) await new Promise((r) => setTimeout(r, 200));
         if (S.onboarded) { close(); viewLearn.shown = false; refresh(); updateChips(); toast('已還原你的進度'); }
@@ -600,14 +634,18 @@
   /* ───────────── 路由與重繪 ───────────── */
   const ROUTES = { learn: viewLearn, dex: viewDex, practice: viewPractice, me: viewMe, bank: viewBank };
   let currentRoute = 'learn';
+  const PAGE_TITLES = { learn: '學習地圖', dex: '圖鑑', practice: '練習', me: '我的', quiz: '自訂測驗', cards: '單字卡', kana: '五十音練習', phrases: '情境會話', bank: '單字庫' };
   const TABS = { bank: 'practice', quiz: 'practice', cards: 'practice', kana: 'practice', phrases: 'practice' };
   const tabOf = (r) => TABS[r] || r;
   function route() {
     const name = (location.hash.replace(/^#\/?/, '').split('/')[0] || 'learn');
-    currentRoute = ROUTES[name] ? name : 'learn';
+    currentRoute = Object.prototype.hasOwnProperty.call(ROUTES, name) ? name : 'learn';
     document.querySelectorAll('[data-tab]').forEach((a) => { a.classList.toggle('on', a.dataset.tab === tabOf(currentRoute)); if (a.dataset.tab === tabOf(currentRoute)) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     ROUTES[currentRoute]();
     if (currentRoute !== 'learn') window.scrollTo({ top: 0, behavior: 'instant' });
+    document.title = `${PAGE_TITLES[currentRoute] || '學習'}｜にほんご冒險`;
+    if (route.started && main()) main().focus({ preventScroll: true }); // 換頁後把焦點移到內容區，螢幕閱讀器與鍵盤使用者才知道頁面換了
+    route.started = true;
     updateChips();
   }
   function refresh() {
@@ -643,15 +681,15 @@
         return;
       }
       if ((el = t.closest('[data-dtab]'))) { dexState.tab = el.dataset.dtab; return viewDex(); }
-      if ((el = t.closest('[data-dfilter]'))) { dexState.filter = el.dataset.dfilter; return renderDexBody(); }
-      if ((el = t.closest('[data-dlv]'))) { dexState.lv = el.dataset.dlv; return renderDexBody(); }
-      if ((el = t.closest('[data-dpos]'))) { dexState.pos = el.dataset.dpos; return renderDexBody(); }
+      if ((el = t.closest('[data-dfilter]'))) { dexState.filter = el.dataset.dfilter; renderDexTools(); return renderDexBody(); }
+      if ((el = t.closest('[data-dlv]'))) { dexState.lv = el.dataset.dlv; renderDexTools(); return renderDexBody(); }
+      if ((el = t.closest('[data-dpos]'))) { dexState.pos = el.dataset.dpos; renderDexTools(); return renderDexBody(); }
       if ((el = t.closest('[data-script]'))) { dexState.script = el.dataset.script; return viewDex(); }
       if ((el = t.closest('[data-word]'))) return openWordSheet(el.dataset.word);
       if ((el = t.closest('[data-kana]'))) return openWordSheet(el.dataset.kana);
-      if ((el = t.closest('[data-lock]'))) { const n = JP.nodeById.get(el.dataset.lock); return toast(`🔒 完成「${esc(n.title)}」就會解鎖`); }
-      if ((el = t.closest('[data-goal]'))) { S.goal = +el.dataset.goal; JP.save(); return refresh(); }
-      if ((el = t.closest('[data-theme]'))) { S.set.theme = el.dataset.theme; JP.save(); applyTheme(); return refresh(); }
+      if ((el = t.closest('[data-lock]'))) { const n = JP.nodeById.get(el.dataset.lock); return toast(`🔒 完成「${n.title}」就會解鎖`); }
+      if ((el = t.closest('[data-goal]'))) { S.goal = +el.dataset.goal; S.smt = Date.now(); JP.save(); return refresh(); }
+      if ((el = t.closest('[data-theme]'))) { S.set.theme = el.dataset.theme; S.smt = Date.now(); JP.save(); applyTheme(); return refresh(); }
       if ((el = t.closest('[data-act]'))) {
         const a = el.dataset.act;
         if (a === 'testvoice') return testVoice();
@@ -666,11 +704,13 @@
     });
     main().addEventListener('change', (e) => {
       const t = e.target;
-      if (t.dataset && t.dataset.set) { S.set[t.dataset.set] = t.checked; JP.save(); if (t.dataset.set === 'sound' && t.checked) JP.sfx.correct(); return; }
+      if (t.dataset && t.dataset.set) { S.set[t.dataset.set] = t.checked; S.smt = Date.now(); JP.save(); if (t.dataset.set === 'sound' && t.checked) JP.sfx.correct(); return; }
       if (t.id === 'set-voice') { S.set.voice = t.value; JP.save(); testVoice(); return; }
       if (t.id === 'import-file' && t.files[0]) importData(t.files[0]);
     });
-    main().addEventListener('input', (e) => { if (e.target.id === 'dex-q') { dexState.q = e.target.value; renderDexBody(); } });
+    main().addEventListener('input', (e) => { if (e.target.id === 'dex-q') { dexState.q = e.target.value; if (!e.isComposing) renderDexBody(); } });
+    // 輸入法組字中不重畫結果，組完字再搜尋
+    main().addEventListener('compositionend', (e) => { if (e.target.id === 'dex-q') { dexState.q = e.target.value; renderDexBody(); } });
     JP.on('sync', () => {
       const el = document.getElementById('sync-card');
       if (currentRoute === 'me' && el && !document.querySelector('.overlay.open')) el.outerHTML = syncCard();

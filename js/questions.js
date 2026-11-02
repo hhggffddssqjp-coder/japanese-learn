@@ -69,8 +69,11 @@
     // 優先使用同課、同世界的單字；若是 N5 的題目，別混入太難的 N4 單字
     return pickDistinct(same.concat(near, rest), n, keyFn, [keyFn(it)]);
   }
-  function kanaDistractors(it, n, keyFn, needEm) {
-    const base = kanaAll.filter((c) => c.script === it.script && !!c.yoon === !!it.yoon && c.id !== it.id && !c.rare && (!needEm || c.em));
+  // 唸起來一樣的假名（お／を、じ／ぢ、ず／づ，片假名同理）：聽力題不能同時出現在選項裡
+  const SAME_SOUND = { を: 'お', ヲ: 'オ', ぢ: 'じ', ヂ: 'ジ', づ: 'ず', ヅ: 'ズ' };
+  const soundOf = (ch) => SAME_SOUND[ch] || ch;
+  function kanaDistractors(it, n, keyFn, needEm, listening) {
+    const base = kanaAll.filter((c) => c.script === it.script && !!c.yoon === !!it.yoon && c.id !== it.id && !c.rare && (!needEm || c.em) && !(listening && soundOf(c.jp) === soundOf(it.jp)));
     const look = base.filter((c) => lookalikes(it.jp).includes(c.jp));
     const learned = base.filter((c) => S.cards[c.id] && !look.includes(c));
     const rest = base.filter((c) => !look.includes(c) && !learned.includes(c));
@@ -159,12 +162,13 @@
   }
   B.order = (it0) => { if (it0.kind !== 'word' || !it0.ex || it0.noOrder) return null; const it = withEx(it0); return orderQ(it.ex, it.exZh, it, 2); };
   // 輸入羅馬拼音
+  // 輸入題：中文釋義相同的單字（友達／友人）的羅馬拼音都算對
   B.type = (it) => {
     if (it.kind === 'kana') {
       if (it.rare) return null;
-      return mk(it, 'type', 2, { type: 'type', title: '輸入羅馬拼音', prompt: { jp: esc(it.jp), say: it.jp }, accept: it.jp === 'を' || it.jp === 'ヲ' ? ['wo', 'o'] : it.ro, placeholder: '例：ka' }); // を的實際發音是 o，兩種寫法都接受
+      return mk(it, 'type', 2, { type: 'type', title: '輸入羅馬拼音', prompt: { jp: esc(it.jp), say: it.jp }, accept: it.jp === 'を' || it.jp === 'ヲ' ? ['wo', 'o'] : it.ro, placeholder: '用羅馬拼音輸入' }); // を的實際發音是 o，兩種寫法都接受
     }
-    return mk(it, 'type', 2, { type: 'type', title: '輸入這個單字的羅馬拼音', prompt: { em: it.em, zh: it.zh, say: sayOf(it) }, accept: it.ro, placeholder: '羅馬拼音，例：' + (it.ro.length > 6 ? it.ro.slice(0, 4) + '…' : 'neko') });
+    return mk(it, 'type', 2, { type: 'type', title: '輸入這個單字的羅馬拼音', prompt: { em: it.em, zh: it.zh, say: sayOf(it) }, accept: [it.ro].concat(wordsAll.filter((w) => w !== it && w.zh === it.zh && w.ro !== it.ro).map((w) => w.ro)), placeholder: '用羅馬拼音輸入讀音' });
   };
 
   /* 假名題型 */
@@ -179,7 +183,7 @@
   };
   B.listen2kana = (it) => {
     if (!canListen() || it.rare) return null;
-    const ds = kanaDistractors(it, 3, (c) => c.jp); if (ds.length < 3) return null;
+    const ds = kanaDistractors(it, 3, (c) => c.jp, false, true); if (ds.length < 3) return null;
     return mk(it, 'listen2kana', 1, { title: '聽聽看，選出你聽到的假名', listening: true, prompt: { say: it.jp, listen: true, auto: true }, layout: 'grid', choices: opts(it, ds, (o) => `<span class="kc">${esc(o.jp)}</span>`) });
   };
   // 假名 → 圖例（用圖像聯想記憶）
@@ -237,7 +241,7 @@
   // 聽音 → 選羅馬拼音（單字與假名都適用）
   B.listen2ro = (it) => {
     if (!canListen()) return null;
-    const ds = it.kind === 'word' ? wordDistractors(it, 3, (c) => c.ro) : kanaDistractors(it, 3, (c) => c.ro);
+    const ds = it.kind === 'word' ? wordDistractors(it, 3, (c) => c.ro) : kanaDistractors(it, 3, (c) => c.ro, false, true);
     if (ds.length < 3) return null;
     return mk(it, 'listen2ro', 1, { title: '聽聽看，這個音是？', listening: true, prompt: { say: sayOf(it), listen: true, auto: true }, layout: it.kind === 'kana' ? 'grid' : 'list', choices: opts(it, ds, (o) => esc(o.ro)) });
   };
@@ -415,9 +419,9 @@
   const tierOfCard = (id) => { const c = S.cards[id]; const b = c ? c.box : 0; return b <= 1 ? 'easy' : b <= 3 ? 'mid' : 'hard'; };
   function planReview(ids, max = 12) {
     const its = ids.slice(0, max).map(JP.item).filter(Boolean);
-    const qs = [];
+    let qs = [];
     its.forEach((it) => { const q = makeQ(it, tierOfCard(it.id)); if (q) qs.push(q); });
-    shuffle(qs);
+    qs = shuffle(qs);
     spread(qs);
     // 若同種類夠多，加入一題配對
     const words = its.filter((i) => i.kind === 'word' && i.em);
@@ -432,15 +436,16 @@
     (node.gids || []).forEach((gid) => gq.push(...grammarQs(JP.gmap.get(gid), 3)));
     const gTake = gq.length ? Math.min(4, gq.length) : 0;
     const pool = shuffle(its);
-    for (let i = 0; qs.length < count - gTake && i < pool.length * 2; i++) {
+    // 項目少的世界（例如只有 5 個字的入門世界）也要湊滿題數：輪流出題，每次盡量換不同題型
+    for (let i = 0; qs.length < count - gTake && i < count * 3 && pool.length; i++) {
       const it = pool[i % pool.length];
       const q = makeQ(it, Math.random() < 0.6 ? 'hard' : 'mid', []);
       if (q) qs.push(q);
     }
     qs.push(...shuffle(gq).slice(0, gTake));
-    shuffle(qs);
-    spread(qs);
-    return qs;
+    const mixed = shuffle(qs); // shuffle 回傳的是新陣列
+    spread(mixed);
+    return mixed;
   }
 
   // 閃電挑戰與無限出題：從已學過的項目中抽題
