@@ -21,7 +21,7 @@
   ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, () => { JP.sfx.unlock(); JP.tts.unlock(); }, { once: true, capture: true }));
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && JP.ui.closeTop()) e.stopPropagation();
+    if (e.key === 'Escape' && !e.defaultPrevented && JP.ui.closeTop()) e.stopPropagation();
   });
 
   // 滑鼠移到或點到登入按鈕時，先開始載入登入功能

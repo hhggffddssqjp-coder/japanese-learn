@@ -99,7 +99,9 @@
     const [k, v] = el.dataset.qz.split(':');
     if (k === 'start' || k === 'rand') {
       const random = k === 'rand';
-      ensureBank().then((ok) => {
+      // 範圍只選 N5／N4 時不必等 N3 單字庫（離線或載入失敗時也能開始測驗）
+      const needBank = random || !qz.levels.length || qz.levels.includes('N3');
+      (needBank ? ensureBank() : Promise.resolve(true)).then((ok) => {
         if (!ok) return;
         if (!random) store.set('quiz', qz);
         V.launch(() => quizConfig(random));

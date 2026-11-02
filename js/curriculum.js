@@ -210,13 +210,15 @@
   const worldCleared = (w) => stateOf(w.nodes[w.nodes.length - 1]).stars > 0;
   const currentNode = () => NODES[Math.min(S.unlocked, NODES.length - 1)];
 
-  // 課程版本升級（新增關卡會改變索引）：依已完成的關卡重新計算解鎖進度
-  if (S.cv !== 5) {
+  // 依已完成（或跳過）的關卡重新計算解鎖進度：課程版本升級、雲端合併、匯入備份之後都要呼叫，
+  // 避免兩台裝置的關卡編號不同而造成「已完成卻被鎖住」
+  function recalcUnlocked() {
     let m = -1;
     NODES.forEach((n) => { const q = S.nodes[n.id]; if (q && (q.stars > 0 || q.skipped)) m = Math.max(m, n.idx); });
     S.unlocked = Math.max(0, Math.min(NODES.length - 1, m + 1));
-    S.cv = 5; JP.save();
   }
+  JP.recalcUnlocked = recalcUnlocked;
+  if (S.cv !== 5) { recalcUnlocked(); S.cv = 5; JP.save(); }
 
   Object.assign(JP, { WORLDS, NODES, nodeById, worldNodes, stateOf, completeNode, skipWorld, startAtWorld, worldOf, worldStars, worldCleared, currentNode, gmap, lessonMap });
 

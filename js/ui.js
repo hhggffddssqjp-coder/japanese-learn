@@ -44,6 +44,18 @@
     root.innerHTML = `<div class="modal-bg"></div><div class="modal-box" role="dialog" aria-modal="true">${opts.noClose ? '' : `<button class="modal-x" aria-label="關閉">${ICON.close()}</button>`}${html}</div>`;
     document.body.appendChild(root);
     requestAnimationFrame(() => root.classList.add('in'));
+    const opener = document.activeElement; // 關閉時把焦點還給原本的按鈕
+    const heading = root.querySelector('h1, h2, h3');
+    if (heading) { heading.id = heading.id || 'mt' + Math.random().toString(36).slice(2, 8); root.querySelector('.modal-box').setAttribute('aria-labelledby', heading.id); }
+    // 鍵盤 Tab 只在對話框內循環，不會跑到背後的頁面
+    root.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const f = Array.from(root.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter((x) => !x.disabled && x.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !root.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (document.activeElement === last || !root.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+    });
     let closed = false;
     const api = {
       el: root,
@@ -55,6 +67,7 @@
         if (i >= 0) modals.splice(i, 1);
         setTimeout(() => root.remove(), 220);
         if (opts.onClose) opts.onClose();
+        if (opener && opener.focus && document.contains(opener) && !modals.length) { try { opener.focus({ preventScroll: true }); } catch (e) { /* 略過 */ } }
       },
     };
     root.querySelector('.modal-bg').addEventListener('click', () => { if (!opts.noClose) api.close(); });

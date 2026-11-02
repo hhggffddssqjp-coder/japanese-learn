@@ -1,5 +1,5 @@
 /* 離線快取：優先連線，失敗時使用快取（只處理本站與字型；音檔另外快取，Firebase／Google API 一律不攔） */
-const CACHE = 'nihongo-v10';
+const CACHE = 'nihongo-v11';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'js/data-kana.js', 'js/data-words.js', 'js/data-words-extra.js', 'js/data-words-n4a.js', 'js/data-words-n4b.js', 'js/data-word-levels.js', 'js/data-grammar.js', 'js/data-grammar-n4.js', 'js/data-phrases-daily.js', 'js/data-phrases-travel.js', 'js/core.js', 'js/curriculum.js', 'js/achievements.js',
@@ -10,7 +10,8 @@ const AUDIO_CACHE = 'nihongo-audio'; // 預錄語音：播過的才會存，離�
 const AUDIO_MAX = 3000;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: 'reload'：略過瀏覽器的 HTTP 快取（GitHub Pages 預設快取 10 分鐘），確保預先快取的是剛部署的新版
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -58,7 +59,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   e.respondWith(
-    fetch(req)
+    fetch(req, same ? { cache: 'no-cache' } : undefined) // 同網域檔案每次都向伺服器驗證，避免部署後新舊版本混用
       .then((res) => {
         if (res && (res.status === 200 || res.type === 'opaque')) {
           const copy = res.clone();
