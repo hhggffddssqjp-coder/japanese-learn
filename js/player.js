@@ -122,6 +122,7 @@
 
       /* ----- 外框 ----- */
       root.className = `overlay open k-${cfg.kind}${world ? ' w-' + world.theme : ''}`;
+      root.setAttribute('aria-label', cfg.title || '闖關');
       if (cfg.sound) root.dataset.sound = cfg.sound;
       document.body.classList.add('noscroll');
       root.innerHTML = `<div class="play">
@@ -290,7 +291,7 @@
         const needAnswer = q.type === 'order' || q.type === 'type' || q.type === 'choice';
         const ansLine = !ok && q.type === 'type' ? `<div class="rv-ans">正確答案：<b>${esc([].concat(q.accept)[0])}</b></div>` : '';
         const head = ok ? `<b>${praise[Math.floor(Math.random() * praise.length)]}</b>${cheer}` : `<b>${skipped ? '沒關係，記住它！' : q.type === 'match' ? '再多看一次！' : '正確答案是…'}</b>`;
-        pf.innerHTML = `<div class="fb"><div class="fb-head"><span class="fb-ico">${ok ? ICON.check() : ICON.close()}</span>${head}</div>${needAnswer || rv.html ? `<div class="fb-body">${ansLine}${rv.html}</div>` : ''}</div><button type="button" class="btn btn-big ${ok ? 'btn-ok' : 'btn-ng'}" data-act="next" autofocus>${cfg.hearts && st.hearts <= 0 ? '看結果' : '繼續'}</button>`;
+        pf.innerHTML = `<div class="fb" role="status" aria-live="assertive"><div class="fb-head"><span class="fb-ico">${ok ? ICON.check() : ICON.close()}</span>${head}</div>${needAnswer || rv.html ? `<div class="fb-body">${ansLine}${rv.html}</div>` : ''}</div><button type="button" class="btn btn-big ${ok ? 'btn-ok' : 'btn-ng'}" data-act="next" autofocus>${cfg.hearts && st.hearts <= 0 ? '看結果' : '繼續'}</button>`;
         JP.sfx[ok ? 'correct' : 'wrong'](); JP.buzz(ok ? 12 : [30, 40, 30]);
         if (ok && st.combo >= 3 && [3, 5, 8, 10, 15, 20].includes(st.combo)) setTimeout(() => JP.sfx.combo(st.combo), 260);
         const btn = pf.querySelector('[data-act="next"]'); if (btn) btn.focus({ preventScroll: true });

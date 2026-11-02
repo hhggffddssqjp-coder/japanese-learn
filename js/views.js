@@ -107,7 +107,7 @@
     const intro = !S.stats.lessons && !JP.stateOf(JP.NODES[0]).done && JP.currentNode().world === 'intro'
       ? `<div class="card banner tip"><span class="bn-ico">🐱</span><div><b>第一次學日語？跟著地圖走就好</b><small>從「認識日語文字」開始，每關約 3 分鐘，答錯也沒關係。</small></div></div>` : '';
     const rail = `<aside class="rail">${levelCard()}${goalCard()}${streakCard()}</aside>`;
-    main().innerHTML = `<div class="learn">${rail}<div class="map-col">${intro}${voiceBanner()}${reviewBanner()}${JP.WORLDS.map(worldHtml).join('')}<div class="map-end"><p>🗻 更多關卡正在路上…</p></div></div></div>`;
+    main().innerHTML = `<h1 class="sr-only">學習地圖</h1><div class="learn">${rail}<div class="map-col">${intro}${voiceBanner()}${reviewBanner()}${JP.WORLDS.map(worldHtml).join('')}<div class="map-end"><p>🗻 更多關卡正在路上…</p></div></div></div>`;
     const cur = main().querySelector('.node.current');
     if (cur && !viewLearn.shown) setTimeout(() => cur.scrollIntoView({ block: 'center', behavior: 'instant' }), 30);
     viewLearn.shown = true;
@@ -194,7 +194,7 @@
     const got = words.filter((w) => S.cards[w.id]).length;
     const kana = JP.itemList('kana');
     const gotK = kana.filter((k) => S.cards[k.id]).length;
-    const tabs = `<div class="seg-tabs" role="tablist"><button type="button" role="tab" class="${dexState.tab === 'word' ? 'on' : ''}" data-dtab="word">單字圖鑑 <small>${got}/${words.length}</small></button><button type="button" role="tab" class="${dexState.tab === 'kana' ? 'on' : ''}" data-dtab="kana">假名表 <small>${gotK}/${kana.length}</small></button></div>`;
+    const tabs = `<div class="seg-tabs" role="tablist"><button type="button" role="tab" aria-selected="${dexState.tab === 'word'}" class="${dexState.tab === 'word' ? 'on' : ''}" data-dtab="word">單字圖鑑 <small>${got}/${words.length}</small></button><button type="button" role="tab" aria-selected="${dexState.tab === 'kana'}" class="${dexState.tab === 'kana' ? 'on' : ''}" data-dtab="kana">假名表 <small>${gotK}/${kana.length}</small></button></div>`;
     main().innerHTML = `<div class="page dex"><header class="page-h"><h1>圖鑑</h1><p>每學會一個單字，就會點亮一張圖卡。</p></header>${tabs}<div id="dex-tools"></div><div id="dex-body"></div></div>`;
     renderDexTools();
     renderDexBody();
@@ -221,9 +221,9 @@
   }
   function dexToolsHtml() {
     const filters = [['all', '全部'], ['got', '已收集'], ['todo', '未收集'], ['weak', '需加強']];
-    return `<div class="dex-tools"><input id="dex-q" class="search" type="search" placeholder="搜尋日文、中文或羅馬拼音" value="${esc(dexState.q)}" aria-label="搜尋單字"><div class="chips-f">${filters.map(([k, l]) => `<button type="button" class="fchip ${dexState.filter === k ? 'on' : ''}" data-dfilter="${k}">${l}</button>`).join('')}</div>
-      <div class="chips-f">${[['all', '所有級別'], ['N5', 'N5'], ['N4', 'N4'], ['N3', 'N3'], ['N2', 'N2'], ['N1', 'N1']].map(([k, l]) => `<button type="button" class="fchip ${dexState.lv === k ? 'on' : ''}" data-dlv="${k}">${l}</button>`).join('')}</div>
-      <div class="chips-f">${[['all', '所有詞性'], ['名詞', '名詞'], ['動詞', '動詞'], ['形容詞', '形容詞'], ['副詞', '副詞']].map(([k, l]) => `<button type="button" class="fchip ${dexState.pos === k ? 'on' : ''}" data-dpos="${k}">${l}</button>`).join('')}</div></div>`;
+    return `<div class="dex-tools"><input id="dex-q" class="search" type="search" placeholder="搜尋日文、中文或羅馬拼音" value="${esc(dexState.q)}" aria-label="搜尋單字"><div class="chips-f">${filters.map(([k, l]) => `<button type="button" class="fchip ${dexState.filter === k ? 'on' : ''}" aria-pressed="${dexState.filter === k}" data-dfilter="${k}">${l}</button>`).join('')}</div>
+      <div class="chips-f">${[['all', '所有級別'], ['N5', 'N5'], ['N4', 'N4'], ['N3', 'N3'], ['N2', 'N2'], ['N1', 'N1']].map(([k, l]) => `<button type="button" class="fchip ${dexState.lv === k ? 'on' : ''}" aria-pressed="${dexState.lv === k}" data-dlv="${k}">${l}</button>`).join('')}</div>
+      <div class="chips-f">${[['all', '所有詞性'], ['名詞', '名詞'], ['動詞', '動詞'], ['形容詞', '形容詞'], ['副詞', '副詞']].map(([k, l]) => `<button type="button" class="fchip ${dexState.pos === k ? 'on' : ''}" aria-pressed="${dexState.pos === k}" data-dpos="${k}">${l}</button>`).join('')}</div></div>`;
   }
   function renderDexTools() {
     const el = document.getElementById('dex-tools');
@@ -258,7 +258,7 @@
         return `<div class="dex-lesson"><h3><span>${l.em}</span>${esc(l.title)}<small>${esc(l.zh)}・${gotN}/${l.words.length}</small></h3><div class="dex-grid">${ws.map((it) => {
           const c = S.cards[it.id];
           return c ? `<button type="button" class="dtile got" data-word="${esc(it.id)}"><span class="dt-pic">${it.em}</span><b lang="ja">${esc(it.jp)}</b><small>${esc(it.zh)}</small>${boxDots(c.box)}</button>`
-            : `<button type="button" class="dtile locked" data-lock="${esc(n.id)}" aria-label="未收集"><span class="dt-pic">${it.em}</span><b>？？？</b><small>${esc(l.title)}</small></button>`;
+            : `<button type="button" class="dtile locked" data-lock="${esc(n.id)}" tabindex="-1" aria-hidden="true"><span class="dt-pic">${it.em}</span><b>？？？</b><small>${esc(l.title)}</small></button>`;
         }).join('')}</div></div>`;
       }).join('');
       if (blocks) html += `<section class="dex-world w-${w.theme}"><h2><span>${w.em}</span>${esc(w.title)} <small>${esc(w.zh)}</small></h2>${blocks}</section>`;
@@ -338,7 +338,7 @@
         const q = Q.build(it, JP.pick(subs)) || Q.build(it, subs[0]);
         if (q) qs.push(q);
       }
-      if (qs.length < 3) { toast('已學項目還不夠，先去闖關吧'); return null; }
+      if (qs.length < 3) { toast('學過的內容還不夠，先去闖關吧'); return null; }
       return { kind: 'listen', title: '聽力特訓', questions: qs.slice(0, 12) };
     }
     return { kind, title: kind === 'weak' ? '弱點加強' : '每日複習', questions: Q.planReview(ids, 12) };
@@ -365,7 +365,7 @@
         ${card('p-blitz', '⚡', '閃電挑戰', '60 秒內盡量多答對，挑戰個人紀錄', `<b>${S.stats.blitz}</b>最佳紀錄`, 'blitz', learned < 6)}
         ${card('p-quiz', '📝', '自訂測驗', '選範圍、題型、題數、生命與時間限制', '自由設定', 'quiz', false)}
         ${card('p-cards', '🃏', '單字卡', '隨機翻卡瀏覽，查看例句與同主題單字', '不計分', 'cards', false)}
-        ${card('p-kana', 'あ', '五十音練習', '自選平／片假名與範圍，無限刷題', '不用解鎖', 'kana', false)}
+        ${card('p-kana', 'あ', '五十音練習', '自選平／片假名與範圍，不限次數地練習', '不用解鎖', 'kana', false)}
         ${card('p-phr', '💬', '情境會話', '日常會話與旅遊常用句，共 14 個情境、210 句', '有發音', 'phrases', false)}
         ${card('p-bank', '📚', '單字庫・N3', '約 2,000 個 N3 單字，沒有圖片，直接背', '<b>N3</b>開放', 'bank', false)}
         ${card('p-place', '🧭', '程度測驗', '12 題判斷你的程度，並調整起點', '2 分鐘', 'placement', false)}
@@ -393,7 +393,7 @@
     const cur = gs.find((g) => !((S.nodes[g.id] || {}).stars > 0));
     const cells = gs.map((g, i) => {
       const st = (S.nodes[g.id] || {}).stars || 0;
-      return `<button type="button" class="bgrp ${st ? 'done' : ''} ${cur === g ? 'current' : ''}" data-bank="${esc(g.id)}" aria-label="第 ${i + 1} 組，${st} 顆星"><b>${i + 1}</b><span>${[0, 1, 2].map((k) => `<i class="${k < st ? 'on' : ''}">${ICON.star()}</i>`).join('')}</span></button>`;
+      return `<button type="button" class="bgrp ${st ? 'done' : ''} ${cur === g ? 'current' : ''}" data-bank="${esc(g.id)}" aria-label="第 ${i + 1} 組，${st} 顆星"><b>${i + 1}</b><span class="bs" aria-hidden="true"><b>${'★'.repeat(st)}</b>${'★'.repeat(3 - st)}</span></button>`;
     }).join('');
     main().innerHTML = `<div class="page wbank">${head}
       <p class="bank-note">⚠️ JLPT 沒有官方單字表，級別是社群整理的，僅供參考；中文釋義與例句由 AI 撰寫，可能有誤，建議搭配辭典確認。</p>
@@ -427,7 +427,7 @@
       <p class="freeze">❄️ 連勝凍結 ×${S.freezes}：漏學一天時會自動使用，連續 7 天可獲得 1 個（最多 2 個）</p>
       <section class="card"><h3>學習統計</h3><div class="stat-grid">
         <div><b>${learnedW}</b><span>已收集單字</span></div><div><b>${learnedK}</b><span>已學假名</span></div>
-        <div><b>${S.stats.lessons}</b><span>通過關卡</span></div><div><b>${acc}%</b><span>整體正確率</span></div>
+        <div><b>${S.stats.lessons}</b><span>完成關卡</span></div><div><b>${acc}%</b><span>整體正確率</span></div>
         <div><b>${S.bestStreak}</b><span>最長連勝（天）</span></div><div><b>${S.stats.bestCombo}</b><span>最高連擊</span></div></div></section>
       <section class="card"><h3>朱印帳 <small class="muted">通關每個世界的鬼關，蓋下一枚朱印</small></h3><div class="stamps">${stamps}</div></section>
       <section class="card"><h3>成就 <small class="muted">${Object.keys(S.ach).length} / ${JP.ACH.length}</small></h3><div class="achs">${ach}</div></section>
@@ -575,6 +575,7 @@
   function showWelcome(opts = {}) {
     if (JP.sync && JP.sync.enabled && !JP.sync.user && JP.sync.preload) JP.sync.preload();
     const root = document.getElementById('overlay');
+    root.setAttribute('aria-label', '歡迎');
     const levels = [
       ['intro', '🌱', '連五十音都不會', '從零開始：先認識文字，每關只學 2～5 個字'],
       ['hira', '🌿', '認識一點假名', '跳過入門，從平假名開始複習'],
@@ -584,6 +585,7 @@
     ];
     let lvl = 'intro', goal = S.goal || 50;
     root.className = 'overlay open k-welcome';
+    setTimeout(() => { const f = root.querySelector('.lvl-opt.on'); if (f) f.focus({ preventScroll: true }); }, 80); // 鍵盤與螢幕閱讀器使用者一開啟就在歡迎畫面內
     document.body.classList.add('noscroll');
     root.innerHTML = `<div class="welcome"><div class="wel-in">
       <div class="wel-mascot" aria-hidden="true">🐱</div>
@@ -632,6 +634,7 @@
   /* ───────────── 路由與重繪 ───────────── */
   const ROUTES = { learn: viewLearn, dex: viewDex, practice: viewPractice, me: viewMe, bank: viewBank };
   let currentRoute = 'learn';
+  const PAGE_TITLES = { learn: '學習地圖', dex: '圖鑑', practice: '練習', me: '我的', quiz: '自訂測驗', cards: '單字卡', kana: '五十音練習', phrases: '情境會話', bank: '單字庫' };
   const TABS = { bank: 'practice', quiz: 'practice', cards: 'practice', kana: 'practice', phrases: 'practice' };
   const tabOf = (r) => TABS[r] || r;
   function route() {
@@ -640,6 +643,9 @@
     document.querySelectorAll('[data-tab]').forEach((a) => { a.classList.toggle('on', a.dataset.tab === tabOf(currentRoute)); if (a.dataset.tab === tabOf(currentRoute)) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     ROUTES[currentRoute]();
     if (currentRoute !== 'learn') window.scrollTo({ top: 0, behavior: 'instant' });
+    document.title = `${PAGE_TITLES[currentRoute] || '學習'}｜にほんご冒險`;
+    if (route.started && main()) main().focus({ preventScroll: true }); // 換頁後把焦點移到內容區，螢幕閱讀器與鍵盤使用者才知道頁面換了
+    route.started = true;
     updateChips();
   }
   function refresh() {

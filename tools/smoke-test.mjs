@@ -170,3 +170,4 @@ const nWords = JP.itemList('word').length;
 console.log(`世界 ${JP.WORLDS.length}、關卡 ${JP.NODES.length}、單字 ${nWords}（含單字庫 ${JP.itemList('word').filter((w) => w.bank).length}）、文法 ${JP.GRAMMAR.length}`);
 if (problems.length) { console.log(`發現 ${problems.length} 個問題：`); problems.slice(0, 60).forEach((p) => console.log(' -', p)); process.exit(1); }
 console.log('冒煙測試通過 ✓');
+process.exit(0); // 保險：就算哪個模組留下計時器或連線，測試也要結束

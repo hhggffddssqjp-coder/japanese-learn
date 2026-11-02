@@ -191,6 +191,7 @@
   let bc = null;
   try {
     bc = new BroadcastChannel('jpl');
+    if (bc.unref) bc.unref(); // Node（測試）裡 BroadcastChannel 會讓程式結束不了；瀏覽器沒有這個方法
     bc.onmessage = (e) => {
       if (e.data !== 'clear') return;
       replaceState(defaults());

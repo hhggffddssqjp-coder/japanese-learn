@@ -156,7 +156,8 @@
 
   // 沒有出現在 JLPT 單字表的單字，依所屬世界推定級別
   const WORLD_LV = { n5a: 'N5', n5b: 'N5', n5c: 'N5', n4: 'N4', n4b: 'N4' };
-  NODES.forEach((n) => { if (n.type === 'lesson') n.items.forEach((id) => { const it = ITEMS.get(id); if (it && !it.lv) it.lv = WORLD_LV[n.world] || ''; }); });
+  // 前兩個 N5 世界是我們自己編排的基礎課：社群 JLPT 表把 こんにちは、さようなら 等排在 N3／N2，會讓初學者誤以為自己在學進階單字，所以一律標 N5
+  NODES.forEach((n) => { if (n.type === 'lesson') n.items.forEach((id) => { const it = ITEMS.get(id); if (!it) return; if (n.world === 'n5a' || n.world === 'n5b') it.lv = 'N5'; else if (!it.lv) it.lv = WORLD_LV[n.world] || ''; }); });
 
   // 鬼關題庫：該世界所有項目
   WORLDS.forEach((w) => {

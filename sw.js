@@ -11,7 +11,11 @@ const AUDIO_MAX = 3000;
 
 self.addEventListener('install', (e) => {
   // cache: 'reload'：略過瀏覽器的 HTTP 快取（GitHub Pages 預設快取 10 分鐘），確保預先快取的是剛部署的新版
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => {
+    // N3 單字庫不阻塞安裝，在背景預先快取，第一次離線也能用
+    c.add(new Request('js/bank-n3.js', { cache: 'reload' })).catch(() => {});
+    return c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })));
+  }).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {

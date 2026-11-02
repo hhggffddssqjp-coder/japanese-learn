@@ -29,6 +29,19 @@
     if (JP.sync && JP.sync.preload && e.target.closest && e.target.closest('[data-act="signin"]')) JP.sync.preload();
   }, { passive: true }));
 
+  // 全螢幕畫面（闖關、歡迎）開關時，同步背景頁面的 inert 狀態，並把 Tab 限制在畫面內
+  const ovEl = document.getElementById('overlay');
+  new MutationObserver(() => JP.ui.syncInert()).observe(ovEl, { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || !ovEl.classList.contains('open') || document.querySelector('.modal.in')) return;
+    const f = Array.from(ovEl.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter((x) => !x.disabled && x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (!ovEl.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
   JP.views.applyTheme();
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener && window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', JP.views.applyTheme);
   JP.views.bind();
